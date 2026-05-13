@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Sheets 연동 가이드 - 한양전공 전자서명</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: #f5f6f8; color:#1a1a1a; line-height: 1.6; padding: 20px; }
+  .container { max-width: 760px; margin: 0 auto; background:#fff; border-radius: 18px; padding: 36px 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+  h1 { font-size: 26px; color: #0a3a1e; margin-bottom: 8px; letter-spacing: -1px; }
+  .subtitle { color: #666; margin-bottom: 28px; font-size: 14px; }
+  h2 { font-size: 18px; margin: 28px 0 12px; color: #0a3a1e; padding-bottom: 8px; border-bottom: 2px solid #e3e6ea; }
+  .step { background: #f8faf9; border-left: 4px solid #1f6b3a; padding: 16px 20px; border-radius: 6px; margin: 14px 0; }
+  .step-num { display: inline-block; background: #1f6b3a; color: #fff; width: 26px; height: 26px; border-radius: 50%; text-align: center; line-height: 26px; font-weight: 700; font-size: 13px; margin-right: 8px; }
+  .step b { color: #0a3a1e; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 18px; border-radius: 10px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; font-family: "SF Mono", Menlo, monospace; margin: 12px 0; }
+  .copy-wrap { position: relative; }
+  .copy-btn { position: absolute; top: 10px; right: 10px; background: #1f6b3a; color:#fff; border:none; padding:6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .copy-btn:hover { background: #155026; }
+  .tip { background:#fff8e0; border: 1px solid #f3e2a3; padding: 12px 16px; border-radius: 8px; font-size: 13.5px; color: #7a5a00; margin: 12px 0; }
+  .tip b { display: block; margin-bottom: 4px; }
+  .warn { background:#fdecec; border: 1px solid #f3a3a3; padding: 12px 16px; border-radius: 8px; font-size: 13.5px; color: #7a0a0a; margin: 12px 0; }
+  ol, ul { padding-left: 22px; margin: 8px 0; }
+  li { margin: 6px 0; }
+  .pill { display: inline-block; background:#eef0f3; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #444; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📊 Google Sheets 연동 가이드</h1>
+  <div class="subtitle">한양전공(주) 법정의무교육 전자서명 시스템</div>
+
+  <p style="font-size: 14.5px; color: #444;">
+    이 가이드를 따라하면 직원이 서명할 때마다 구글 스프레드시트에 자동으로 기록이 쌓입니다.
+    <b>최초 1회만 설정</b>하면 됩니다. 약 5분 소요됩니다.
+  </p>
+
+  <h2>1단계 — 스프레드시트 만들기</h2>
+  <div class="step">
+    <p><span class="step-num">1</span> <b><a href="https://sheets.google.com" target="_blank">sheets.google.com</a></b>에 접속해 빈 스프레드시트를 새로 만듭니다.</p>
+    <p><span class="step-num">2</span> 시트 이름을 <span class="pill">한양전공_교육서명기록</span> 등으로 변경합니다.</p>
+  </div>
+
+  <h2>2단계 — Apps Script 코드 붙여넣기</h2>
+  <div class="step">
+    <p><span class="step-num">1</span> 상단 메뉴에서 <b>확장 프로그램 → Apps Script</b>를 클릭합니다.</p>
+    <p><span class="step-num">2</span> 기본 코드를 모두 지우고 아래 코드를 <b>전체 복사 → 붙여넣기</b>합니다.</p>
+  </div>
+
+  <div class="copy-wrap">
+    <button class="copy-btn" onclick="copyCode()">📋 복사</button>
+<pre id="code">/**
+ * 한양전공(주) 법정의무교육 전자서명 수신 스크립트
+ * - POST 요청 시: '서명기록' 시트에 한 줄 추가
+ * - 서명 이미지: '서명이미지' 시트에 별도 저장
+ */
+const HEADER = ['일시','교육명','부서','직급','이름','서명이미지(미리보기)','단말정보'];
+
+function doPost(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('서명기록');
+    if (!sheet) {
+      sheet = ss.insertSheet('서명기록');
+      sheet.appendRow(HEADER);
+      sheet.getRange('A1:G1').setFontWeight('bold').setBackground('#1f6b3a').setFontColor('#fff');
+      sheet.setFrozenRows(1);
+      sheet.setColumnWidth(1, 150);
+      sheet.setColumnWidth(2, 200);
+      sheet.setColumnWidth(6, 220);
+    }
+    const data = JSON.parse(e.postData.contents);
+
+    // 서명 이미지를 Drive에 저장하고 IMAGE 함수로 시트에 표시
+    let imageFormula = '';
+    if (data.img && data.img.startsWith('data:image/')) {
+      const blob = Utilities.newBlob(
+        Utilities.base64Decode(data.img.split(',')[1]),
+        'image/png',
+        `${data.dept}_${data.name}_${new Date().getTime()}.png`
+      );
+      // 같은 폴더에 이미지 저장
+      const folder = getOrCreateFolder_('한양전공_서명이미지');
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      const id = file.getId();
+      imageFormula = `=IMAGE("https://drive.google.com/uc?export=view&id=${id}", 4, 30, 90)`;
+    }
+
+    const row = [
+      data.atStr || new Date().toLocaleString('ko-KR'),
+      data.trainingName || '',
+      data.dept || '',
+      data.rank || '',
+      data.name || '',
+      '',
+      data.userAgent || ''
+    ];
+    sheet.appendRow(row);
+    if (imageFormula) {
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow, 6).setFormula(imageFormula);
+      sheet.setRowHeight(lastRow, 50);
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true, row: sheet.getLastRow() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: false, error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput('한양전공(주) 전자서명 수신 API 정상 작동')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+function getOrCreateFolder_(name) {
+  const it = DriveApp.getFoldersByName(name);
+  if (it.hasNext()) return it.next();
+  return DriveApp.createFolder(name);
+}</pre>
+  </div>
+
+  <h2>3단계 — 웹앱으로 배포</h2>
+  <div class="step">
+    <p><span class="step-num">1</span> 우측 상단 <b>배포 → 새 배포</b> 클릭</p>
+    <p><span class="step-num">2</span> 유형 선택 옆 ⚙ 톱니바퀴 → <b>웹 앱</b> 선택</p>
+    <p><span class="step-num">3</span> 다음과 같이 설정:</p>
+    <ul>
+      <li>설명: <span class="pill">한양전공 전자서명 v1</span></li>
+      <li>다음 사용자로 실행: <b>나</b></li>
+      <li>액세스 권한이 있는 사용자: <b>모든 사용자</b></li>
+    </ul>
+    <p><span class="step-num">4</span> <b>배포</b> 클릭 → 권한 승인 요청이 나오면 <b>액세스 승인 → 본인 계정 선택 → 고급 → "(안전하지 않음) 이동" → 허용</b></p>
+    <p><span class="step-num">5</span> 표시된 <b>웹 앱 URL</b>을 복사해 둡니다. (https://script.google.com/macros/s/...../exec 형태)</p>
+  </div>
+
+  <div class="warn">
+    <b>⚠ "안전하지 않음" 경고가 뜨는 이유</b>
+    구글에서 검증하지 않은 본인 작성 스크립트이기 때문이며, 본인 회사 시트에만 쓰는 코드이므로 안전합니다. "고급 → 이동 → 허용"으로 진행하시면 됩니다.
+  </div>
+
+  <h2>4단계 — 서명 시스템에 URL 등록</h2>
+  <div class="step">
+    <p><span class="step-num">1</span> <b>한양전공_교육서명시스템.html</b>을 엽니다.</p>
+    <p><span class="step-num">2</span> 우측 상단 <b>관리자</b> 버튼 클릭 → 비밀번호 <span class="pill">123456</span> 입력</p>
+    <p><span class="step-num">3</span> 상단 <b>📊 Google Sheets 연동</b> 카드에 3단계에서 복사한 URL 붙여넣기 → <b>저장</b></p>
+    <p><span class="step-num">4</span> 카드가 초록색으로 변하면 연동 완료. 이제 서명할 때마다 시트에 자동 기록됩니다.</p>
+  </div>
+
+  <h2>5단계 — 확인 및 운영</h2>
+  <div class="step">
+    <p>직원이 한 명 서명한 후 스프레드시트로 돌아가면 <b>서명기록</b> 시트에 한 줄이 추가되고, 서명 이미지가 <b>구글 드라이브 → 한양전공_서명이미지</b> 폴더에 자동 저장됩니다.</p>
+    <p>이전에 로컬에만 저장된 서명들은 관리자 메뉴 <b>🔄 전체 동기화</b> 버튼으로 일괄 전송할 수 있습니다.</p>
+  </div>
+
+  <div class="tip">
+    <b>💡 운영 팁</b>
+    여러 부서/지점이 같은 시트로 동시에 기록할 수 있습니다. URL만 공유하면 모든 단말의 서명이 한 시트에 모입니다. 단말이 인터넷이 안 되는 환경이면 로컬에 저장됐다가 다음 접속 시 <b>전체 동기화</b>로 올리세요.
+  </div>
+
+  <div class="tip" style="background:#e8f0fe; border-color:#c5d7f3; color:#1a4480;">
+    <b>🔒 보안 안내</b>
+    관리자 비밀번호 <b>123456</b>은 HTML 소스를 보면 노출됩니다. 외부 공유 환경이라면 HTML 파일을 열어 <code>const ADMIN_PW = '123456';</code> 부분의 값을 변경해 주세요.
+  </div>
+
+  <h2>문제 해결</h2>
+  <ul>
+    <li><b>서명해도 시트에 안 들어와요</b> — 관리자 화면에서 URL이 저장됐는지, https://script.google.com/macros/.../exec 으로 끝나는지 확인. 끝이 <code>/dev</code>가 아닌 <code>/exec</code>여야 합니다.</li>
+    <li><b>이미지가 #REF! 로 표시돼요</b> — 시트 셀에서 셀 우클릭 → 이미지 → IMAGE 함수 새로고침 또는 페이지 새로고침.</li>
+    <li><b>스크립트 수정 후 적용이 안 됨</b> — 배포 → 배포 관리 → 연필(편집) 아이콘 → 버전 "새 버전" → 배포.</li>
+  </ul>
+
+</div>
+<script>
+function copyCode() {
+  const txt = document.getElementById('code').textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ 복사됨';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+</script>
+</body>
+</html>

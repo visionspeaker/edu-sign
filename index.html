@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>한양전공(주) 법정의무교육 전자서명</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:#f5f6f8; color:#1a1a1a; }
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; background:#fff; position:relative; padding-bottom:120px; }
+  .header { padding: 20px 24px 12px; display:flex; align-items:center; gap:12px; }
+  .back-btn { width:36px; height:36px; border:none; background:transparent; font-size:24px; cursor:pointer; color:#333; }
+  .header-meta { flex:1; display:flex; justify-content:flex-end; align-items:center; color:#777; font-size:13px; }
+  .title-area { padding: 4px 24px 16px; }
+  .logo-text { font-size: 28px; font-weight: 800; color:#0a3a1e; letter-spacing:-1px; }
+  .subtitle { color:#666; font-size:14px; margin-top:4px; }
+  .progress-bar { display:flex; gap:6px; padding: 16px 24px 8px; }
+  .progress-seg { flex:1; height:4px; background:#e3e6ea; border-radius:2px; transition:all .3s; }
+  .progress-seg.active { background:#1f6b3a; }
+  .step-label { padding: 4px 24px 12px; color:#888; font-size:13px; }
+  .step-title { padding: 8px 24px 20px; font-size:24px; font-weight:800; line-height:1.3; }
+  .step-title small { display:block; font-size:14px; font-weight:500; color:#666; margin-top:6px; }
+  .training-list { padding: 0 16px; display:flex; flex-direction:column; gap:12px; }
+  .training-card { display:flex; align-items:center; gap:14px; padding:18px 16px; background:#fff; border:2px solid #eef0f3; border-radius:14px; cursor:pointer; transition: all .15s; }
+  .training-card:active { transform: scale(.99); }
+  .training-card.selected { border-color:#1f6b3a; background:#f3f9f5; }
+  .training-icon { width:42px; height:42px; border-radius:10px; background:#eef0f3; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+  .training-card.selected .training-icon { background:#1f6b3a; color:#fff; }
+  .training-info { flex:1; min-width:0; }
+  .training-name { font-weight:700; font-size:16px; margin-bottom:4px; }
+  .training-desc { font-size:12px; color:#777; line-height:1.4; }
+  .chev { color:#bbb; font-size:18px; }
+  .field { margin: 0 16px 12px; padding:14px 16px; background:#fff; border:2px solid #eef0f3; border-radius:14px; display:flex; align-items:center; gap:12px; }
+  .field-icon { width:32px; height:32px; border-radius:8px; background:#eef0f3; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .field-body { flex:1; min-width:0; }
+  .field-label { font-size:11px; color:#888; }
+  .field-value { font-size:15px; font-weight:600; margin-top:2px; }
+  .field-value.placeholder { color:#aaa; font-weight:400; }
+  select, .selector, input[type="text"], input[type="password"], input[type="url"] { width:100%; padding:14px 16px; border:2px solid #eef0f3; border-radius:14px; font-size:15px; background:#fff; font-family:inherit; -webkit-appearance:none; appearance:none; }
+  select:focus, input:focus { outline:none; border-color:#1f6b3a; }
+  .selector { cursor:pointer; display:flex; align-items:center; gap:12px; }
+  .signature-area { margin: 0 16px 20px; }
+  .signature-meta { background:#f7f8fa; padding:12px 16px; border-radius:10px 10px 0 0; border:2px solid #eef0f3; border-bottom:none; display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#444; font-weight:600; }
+  .signature-meta .reset { color:#1f6b3a; cursor:pointer; font-weight:600; }
+  .signature-canvas-wrap { background:#fff; border:2px solid #eef0f3; border-top:none; border-radius:0 0 10px 10px; padding:8px; }
+  canvas { width:100%; height:240px; touch-action:none; display:block; background:linear-gradient(#fff,#fff) padding-box; }
+  .sig-label { text-align:center; color:#bbb; font-size:11px; letter-spacing:3px; padding-top:6px; border-top:1px dashed #ddd; margin: 8px 16px 0; }
+  .bottom-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; padding:14px 16px 24px; background:linear-gradient(to top, #fff 80%, transparent); display:flex; gap:8px; }
+  .btn { flex:1; padding:16px; border-radius:14px; border:none; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .btn-primary { background:#1f6b3a; color:#fff; }
+  .btn-primary:disabled { background:#c2cbc4; cursor:not-allowed; }
+  .btn-ghost { background:#eef0f3; color:#333; flex:0 0 56px; padding:16px 12px; }
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; padding:24px; z-index:1000; }
+  .modal-bg.show { display:flex; }
+  .modal { background:#fff; border-radius:18px; padding:28px 24px 24px; max-width:340px; width:100%; text-align:center; }
+  .modal-icon { width:52px; height:52px; border-radius:50%; background:#fde8e8; color:#c62828; display:flex; align-items:center; justify-content:center; font-size:24px; margin: 0 auto 16px; }
+  .modal-icon.ok { background:#e6f4ec; color:#1f6b3a; }
+  .modal-icon.lock { background:#eef0f3; color:#444; }
+  .modal-title { font-size:18px; font-weight:800; margin-bottom:10px; }
+  .modal-body { font-size:14px; color:#555; line-height:1.6; margin-bottom:20px; }
+  .modal-btn { width:100%; padding:14px; background:#1f6b3a; color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .modal-btn.ghost { background:#eef0f3; color:#333; margin-top:8px; }
+  .modal input { margin-bottom: 10px; text-align:center; letter-spacing: 4px; font-size:18px; }
+  .footer-link { text-align:center; padding: 30px 16px 10px; font-size:12px; color:#999; }
+  /* Admin */
+  .admin-view { padding: 20px 20px 120px; }
+  .admin-title { font-size:22px; font-weight:800; margin-bottom: 4px; }
+  .admin-sub { color:#666; font-size:13px; margin-bottom:18px; }
+  .stat-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:8px; margin-bottom:18px; }
+  .stat-card { background:#fff; border:1px solid #eef0f3; border-radius:12px; padding:14px 10px; text-align:center; }
+  .stat-num { font-size:22px; font-weight:800; color:#1f6b3a; }
+  .stat-lbl { font-size:11px; color:#888; margin-top:4px; }
+  .admin-tabs { display:flex; gap:6px; margin-bottom: 12px; overflow-x:auto; padding-bottom:4px; }
+  .admin-tab { padding:8px 14px; border-radius:18px; background:#eef0f3; color:#555; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; border:none; font-family:inherit; }
+  .admin-tab.active { background:#1f6b3a; color:#fff; }
+  .training-select-admin { width:100%; margin-bottom:14px; }
+  .dept-block { background:#fff; border:1px solid #eef0f3; border-radius:12px; margin-bottom:10px; overflow:hidden; }
+  .dept-head { padding:12px 14px; background:#fafbfc; font-weight:700; font-size:14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+  .dept-head .ratio { font-size:12px; color:#666; font-weight:500; }
+  .dept-body { padding: 4px 0; display:none; }
+  .dept-block.open .dept-body { display:block; }
+  .emp-row { padding:10px 14px; display:flex; justify-content:space-between; align-items:center; font-size:14px; border-top:1px solid #f3f4f7; }
+  .emp-row .meta { font-size:11px; color:#888; }
+  .badge-ok { background:#e6f4ec; color:#1f6b3a; padding:3px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+  .badge-no { background:#fdecec; color:#c62828; padding:3px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+  .badge-sync { background:#e8f0fe; color:#1a73e8; padding:3px 7px; border-radius:10px; font-size:10px; font-weight:700; }
+  .badge-pending { background:#fff4e0; color:#b76b00; padding:3px 7px; border-radius:10px; font-size:10px; font-weight:700; }
+  .sig-thumb { width:60px; height:30px; background:#fff; border:1px solid #eee; border-radius:4px; }
+  .toolbar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .toolbar button { flex:1; min-width: 30%; padding:10px; border:1px solid #ddd; background:#fff; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; font-family:inherit; }
+  .toolbar .danger { color:#c62828; }
+  .toolbar .primary { background:#1f6b3a; color:#fff; border-color:#1f6b3a; }
+  .search-box { width:100%; padding:12px 14px; border:2px solid #eef0f3; border-radius:12px; font-size:14px; margin-bottom: 12px; font-family:inherit; }
+  .search-box:focus { outline:none; border-color:#1f6b3a; }
+  .empty-state { text-align:center; padding:40px 20px; color:#aaa; font-size:14px; }
+  .mode-switch { position:absolute; top:18px; right:16px; background:#eef0f3; color:#444; padding:6px 12px; border-radius:14px; font-size:11px; font-weight:700; cursor:pointer; border:none; font-family:inherit; }
+  .setup-card { background:#fffbf0; border:1px solid #f3e2a3; padding:14px; border-radius:12px; margin-bottom:14px; font-size:13px; color:#7a5a00; line-height:1.6; }
+  .setup-card.ok { background:#f3f9f5; border-color:#bcd9c5; color:#0a3a1e; }
+  .setup-card b { display:block; margin-bottom:6px; }
+  .setup-card a { color:#1a73e8; text-decoration:none; font-weight:600; }
+  .gs-row { display:flex; gap:6px; margin-top:8px; }
+  .gs-row input { flex:1; padding:10px 12px; font-size:13px; border-radius:10px; }
+  .gs-row button { padding:10px 14px; border:none; background:#1f6b3a; color:#fff; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; }
+  @media (min-width: 600px) {
+    .app { box-shadow: 0 0 30px rgba(0,0,0,.06); }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <button class="mode-switch" id="modeSwitch" onclick="requestAdmin()">관리자</button>
+
+  <!-- USER VIEW -->
+  <div id="userView">
+    <div class="header">
+      <button class="back-btn" id="backBtn" onclick="goBack()">‹</button>
+      <div class="header-meta" id="dateLabel"></div>
+    </div>
+    <div class="title-area">
+      <div class="logo-text">한양전공(주)</div>
+      <div class="subtitle">법정의무교육 전자서명</div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-seg active" id="p1"></div>
+      <div class="progress-seg" id="p2"></div>
+      <div class="progress-seg" id="p3"></div>
+    </div>
+    <div class="step-label" id="stepLabel">1 of 3 단계</div>
+
+    <div id="step1">
+      <div class="step-title">어떤 교육을<br>서명하시겠어요?</div>
+      <div class="training-list" id="trainingList"></div>
+    </div>
+
+    <div id="step2" style="display:none;">
+      <div class="step-title">본인 정보를<br>선택해 주세요</div>
+      <div class="field">
+        <div class="field-icon">📋</div>
+        <div class="field-body">
+          <div class="field-label">선택한 교육</div>
+          <div class="field-value" id="selectedTrainingDisplay">-</div>
+        </div>
+      </div>
+      <div style="padding: 0 16px;">
+        <select id="deptSelect" onchange="onDeptChange()">
+          <option value="">— 부서를 선택해 주세요 —</option>
+        </select>
+      </div>
+      <div style="padding: 12px 16px 0;">
+        <select id="empSelect" onchange="onEmpChange()" disabled>
+          <option value="">— 이름을 선택해 주세요 —</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="step3" style="display:none;">
+      <div class="step-title">서명을 남겨주세요<small>손가락이나 펜으로 자유롭게</small></div>
+      <div class="signature-area">
+        <div class="signature-meta">
+          <span id="sigInfo">부서 · 이름</span>
+          <span class="reset" onclick="clearSig()">↻ 다시</span>
+        </div>
+        <div class="signature-canvas-wrap">
+          <canvas id="sig" width="800" height="480"></canvas>
+          <div class="sig-label">S I G N A T U R E</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn btn-ghost" id="prevBtn" onclick="goBack()" style="display:none;">‹</button>
+      <button class="btn btn-primary" id="nextBtn" onclick="goNext()" disabled>다음 단계로</button>
+    </div>
+  </div>
+
+  <!-- ADMIN VIEW -->
+  <div id="adminView" style="display:none;">
+    <div class="admin-view">
+      <div class="admin-title">서명 현황 관리</div>
+      <div class="admin-sub">한양전공(주) · 총 인원 <span id="totalCount">71</span>명</div>
+
+      <div class="setup-card" id="gsSetup">
+        <b>📊 Google Sheets 연동</b>
+        Apps Script 웹앱 URL을 입력하면 서명 시 자동으로 스프레드시트에 기록됩니다.
+        <div class="gs-row">
+          <input type="url" id="gsUrlInput" placeholder="https://script.google.com/.../exec">
+          <button onclick="saveGsUrl()">저장</button>
+        </div>
+        <div style="margin-top:8px; font-size:12px;">
+          설치 방법은 함께 제공된 <b>구글시트_연동_가이드.html</b> 파일을 참고하세요.
+        </div>
+      </div>
+
+      <select class="search-box training-select-admin" id="adminTrainingSelect" onchange="renderAdmin()"></select>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-num" id="signedNum">0</div><div class="stat-lbl">서명 완료</div></div>
+        <div class="stat-card"><div class="stat-num" id="unsignedNum">0</div><div class="stat-lbl">미서명</div></div>
+        <div class="stat-card"><div class="stat-num" id="ratePct">0%</div><div class="stat-lbl">참여율</div></div>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-filter="all" onclick="setFilter('all')">전체</button>
+        <button class="admin-tab" data-filter="signed" onclick="setFilter('signed')">서명완료</button>
+        <button class="admin-tab" data-filter="unsigned" onclick="setFilter('unsigned')">미서명</button>
+      </div>
+
+      <input type="text" class="search-box" id="searchInput" placeholder="이름 또는 부서 검색" oninput="renderAdmin()">
+
+      <div class="toolbar">
+        <button class="primary" onclick="openSheet()">📊 시트 열기</button>
+        <button onclick="syncAll()">🔄 전체 동기화</button>
+        <button onclick="exportCSV()">📥 CSV 내보내기</button>
+        <button onclick="copyUnsigned()">📋 미서명자 복사</button>
+        <button class="danger" onclick="resetCurrent()">🗑 교육 초기화</button>
+        <button onclick="lockAdmin()">🔒 잠금</button>
+      </div>
+
+      <div id="adminBody"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: password -->
+  <div class="modal-bg" id="pwModal">
+    <div class="modal">
+      <div class="modal-icon lock">🔒</div>
+      <div class="modal-title">관리자 인증</div>
+      <div class="modal-body">비밀번호를 입력해 주세요</div>
+      <input type="password" id="pwInput" maxlength="6" inputmode="numeric" placeholder="••••••" autocomplete="off">
+      <button class="modal-btn" onclick="verifyPw()">확인</button>
+      <button class="modal-btn ghost" onclick="closeModal('pwModal')">취소</button>
+    </div>
+  </div>
+
+  <!-- MODAL: dup -->
+  <div class="modal-bg" id="dupModal">
+    <div class="modal">
+      <div class="modal-icon">🔒</div>
+      <div class="modal-title">중복 서명이 차단되었어요</div>
+      <div class="modal-body" id="dupBody"></div>
+      <button class="modal-btn" onclick="closeModal('dupModal')">확인</button>
+    </div>
+  </div>
+
+  <!-- MODAL: success -->
+  <div class="modal-bg" id="okModal">
+    <div class="modal">
+      <div class="modal-icon ok">✓</div>
+      <div class="modal-title">서명이 완료되었어요</div>
+      <div class="modal-body" id="okBody"></div>
+      <button class="modal-btn" onclick="closeModal('okModal'); resetFlow()">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ 데이터 ============
+const TRAININGS = [
+  { id:'safety',   icon:'🦺', name:'산업안전보건 교육',          desc:'산업재해 예방, 작업장 안전수칙, 보호구 사용법' },
+  { id:'privacy',  icon:'🔐', name:'개인정보보호 교육',          desc:'개인정보보호법 주요 내용, 업무 적용 사례' },
+  { id:'harass',   icon:'⚖️', name:'직장 내 성희롱 예방 교육',   desc:'성희롱 정의, 예방 및 대처 방법, 피해자 지원 절차' },
+  { id:'bully',    icon:'🤝', name:'직장 내 괴롭힘 예방 교육',   desc:'직장 내 괴롭힘 정의, 예방 및 대응 절차' },
+  { id:'disabled', icon:'♿', name:'장애인 인식개선 교육',       desc:'장애 이해, 차별 금지, 정당한 편의 제공' },
+  { id:'pension',  icon:'💰', name:'퇴직연금 가입자 교육',       desc:'DB/DC형 제도 안내, 운용방법, 수령방법' }
+];
+
+// 한양전공(주) 조직도 — 일일업무보고 상의 부서 순서 적용
+const ORG_ORDER = [
+  '수배전영업부', '설계부', '생산관리부', '자재관리부',
+  '품질보증부', '고객지원부', '신재생에너지사업부',
+  '부설연구소', '경영지원부', '신사업부', '임원'
+];
+const ORG = {
+  '수배전영업부': [
+    { rank:'부사장', name:'임웅걸' },
+    { rank:'차장',  name:'양정인' },
+    { rank:'대리',  name:'양희철' },
+    { rank:'대리',  name:'김지현' }
+  ],
+  '설계부': [
+    { rank:'부사장', name:'양수근' },
+    { rank:'이사',  name:'노영훈' },
+    { rank:'팀장',  name:'정언' },
+    { rank:'차장',  name:'김선유' },
+    { rank:'차장',  name:'이동윤' },
+    { rank:'과장',  name:'김영훈' },
+    { rank:'주임',  name:'주성표' },
+    { rank:'주임',  name:'함승민' }
+  ],
+  '생산관리부': [
+    { rank:'부장',  name:'양정민' },
+    { rank:'차장',  name:'김대위' },
+    { rank:'주임',  name:'박주호' },
+    { rank:'주임',  name:'김태훈' },
+    { rank:'주임',  name:'임남훈' },
+    { rank:'사원',  name:'김동주' },
+    { rank:'사원',  name:'박율' },
+    { rank:'사원',  name:'김유중' },
+    { rank:'사원',  name:'임도현' },
+    { rank:'사원',  name:'황준우' },
+    { rank:'사원',  name:'얀린' }
+  ],
+  '자재관리부': [
+    { rank:'부장',  name:'전기훈' },
+    { rank:'대리',  name:'조우진' }
+  ],
+  '품질보증부': [
+    { rank:'부장',  name:'유창근' },
+    { rank:'대리',  name:'신은혜' },
+    { rank:'차장',  name:'성명현' },
+    { rank:'과장',  name:'김기현' },
+    { rank:'과장',  name:'신중열' },
+    { rank:'반장',  name:'김민식' },
+    { rank:'주임',  name:'유민종' },
+    { rank:'주임',  name:'김기태' },
+    { rank:'주임',  name:'안광현' },
+    { rank:'사원',  name:'최현호' },
+    { rank:'사원',  name:'박종석' }
+  ],
+  '고객지원부': [
+    { rank:'전무',  name:'이종덕' },
+    { rank:'이사',  name:'이병수' },
+    { rank:'반장',  name:'이연호' },
+    { rank:'팀장',  name:'정영교' },
+    { rank:'팀장',  name:'최인태' },
+    { rank:'차장',  name:'강명광' },
+    { rank:'과장',  name:'박준형' },
+    { rank:'주임',  name:'이민혁' }
+  ],
+  '신재생에너지사업부': [
+    { rank:'상무',  name:'최재웅' },
+    { rank:'부장',  name:'송지훈' },
+    { rank:'팀장',  name:'김수안' },
+    { rank:'과장',  name:'홍기홍' },
+    { rank:'주임',  name:'김은지' }
+  ],
+  '부설연구소': [
+    { rank:'전무',  name:'이석원' },
+    { rank:'상무',  name:'홍두영' },
+    { rank:'부장',  name:'정택기' },
+    { rank:'부장',  name:'조민웅' },
+    { rank:'부장',  name:'김충기' },
+    { rank:'대리',  name:'최재호' },
+    { rank:'주임',  name:'권재응' },
+    { rank:'주임',  name:'김지영' }
+  ],
+  '경영지원부': [
+    { rank:'부사장', name:'조규오' },
+    { rank:'상무',  name:'김소윤' },
+    { rank:'부장',  name:'강유석' },
+    { rank:'주임',  name:'김나래' },
+    { rank:'주임',  name:'이용석' },
+    { rank:'실장',  name:'김동민' },
+    { rank:'실장',  name:'우석' }
+  ],
+  '신사업부': [
+    { rank:'상무',  name:'김계수' },
+    { rank:'본부장', name:'이민규' },
+    { rank:'팀장',  name:'이승호' }
+  ],
+  '임원': [
+    { rank:'사장', name:'김한수' },
+    { rank:'고문', name:'이길형' }
+  ]
+};
+
+const STORAGE_KEY = 'hy_signatures_v2';
+const GS_KEY = 'hy_gs_url';
+const ADMIN_PW = '123456';
+
+function loadSigs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; } }
+function saveSigs(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+function getGsUrl() { return localStorage.getItem(GS_KEY) || ''; }
+function setGsUrl(u) { localStorage.setItem(GS_KEY, u); }
+
+// ============ 상태 ============
+let step = 1;
+let selectedTraining = null;
+let selectedDept = null;
+let selectedEmp = null;
+let isAdmin = false;
+let adminFilter = 'all';
+
+function init() {
+  const d = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  document.getElementById('dateLabel').textContent = `📅 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+
+  document.getElementById('trainingList').innerHTML = TRAININGS.map(t => `
+    <div class="training-card" data-id="${t.id}" onclick="selectTraining('${t.id}')">
+      <div class="training-icon">${t.icon}</div>
+      <div class="training-info">
+        <div class="training-name">${t.name}</div>
+        <div class="training-desc">${t.desc}</div>
+      </div>
+      <div class="chev">›</div>
+    </div>
+  `).join('');
+
+  const dept = document.getElementById('deptSelect');
+  ORG_ORDER.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = `${d} (${ORG[d].length}명)`;
+    dept.appendChild(opt);
+  });
+
+  document.getElementById('adminTrainingSelect').innerHTML =
+    TRAININGS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+
+  let total = 0; ORG_ORDER.forEach(d => total += ORG[d].length);
+  document.getElementById('totalCount').textContent = total;
+
+  // password modal enter key
+  document.getElementById('pwInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') verifyPw();
+  });
+
+  setupCanvas();
+  updateUI();
+}
+
+function selectTraining(id) {
+  selectedTraining = id;
+  document.querySelectorAll('.training-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function onDeptChange() {
+  selectedDept = document.getElementById('deptSelect').value;
+  const emp = document.getElementById('empSelect');
+  emp.innerHTML = '<option value="">— 이름을 선택해 주세요 —</option>';
+  if (selectedDept) {
+    ORG[selectedDept].forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = `${selectedDept}|${p.rank}|${p.name}`;
+      opt.textContent = `${p.rank} ${p.name}`;
+      emp.appendChild(opt);
+    });
+    emp.disabled = false;
+  } else { emp.disabled = true; }
+  selectedEmp = null;
+  document.getElementById('nextBtn').disabled = true;
+}
+
+function onEmpChange() {
+  const v = document.getElementById('empSelect').value;
+  if (!v) { selectedEmp = null; document.getElementById('nextBtn').disabled = true; return; }
+  const [dept, rank, name] = v.split('|');
+  selectedEmp = { dept, rank, name };
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function goNext() {
+  if (step === 1) { if (!selectedTraining) return; step = 2; }
+  else if (step === 2) {
+    if (!selectedEmp) return;
+    const sigs = loadSigs();
+    const key = `${selectedTraining}__${selectedEmp.dept}__${selectedEmp.name}`;
+    if (sigs[key]) {
+      const t = TRAININGS.find(x => x.id === selectedTraining);
+      document.getElementById('dupBody').innerHTML =
+        `[${t.name}]<br><b>${selectedEmp.rank} ${selectedEmp.name}</b>님은 이미 서명을<br>완료하셨습니다.`;
+      document.getElementById('dupModal').classList.add('show');
+      return;
+    }
+    step = 3;
+  }
+  else if (step === 3) { submitSig(); return; }
+  updateUI();
+}
+
+function goBack() { if (step > 1) { step--; updateUI(); } }
+
+function updateUI() {
+  document.getElementById('step1').style.display = step === 1 ? '' : 'none';
+  document.getElementById('step2').style.display = step === 2 ? '' : 'none';
+  document.getElementById('step3').style.display = step === 3 ? '' : 'none';
+  document.getElementById('stepLabel').textContent = `${step} of 3 단계`;
+  document.getElementById('p1').classList.toggle('active', step >= 1);
+  document.getElementById('p2').classList.toggle('active', step >= 2);
+  document.getElementById('p3').classList.toggle('active', step >= 3);
+  document.getElementById('backBtn').style.visibility = step === 1 ? 'hidden' : '';
+  document.getElementById('prevBtn').style.display = step === 1 ? 'none' : '';
+
+  const nextBtn = document.getElementById('nextBtn');
+  if (step === 1) { nextBtn.textContent = '다음 단계로'; nextBtn.disabled = !selectedTraining; }
+  else if (step === 2) {
+    nextBtn.textContent = '서명하러 가기 ✎';
+    nextBtn.disabled = !selectedEmp;
+    if (selectedTraining) {
+      const t = TRAININGS.find(x => x.id === selectedTraining);
+      document.getElementById('selectedTrainingDisplay').textContent = t.name;
+    }
+  }
+  else if (step === 3) {
+    nextBtn.textContent = '제출하기';
+    nextBtn.disabled = !hasDrawn;
+    if (selectedEmp) {
+      document.getElementById('sigInfo').textContent = `${selectedEmp.dept} · ${selectedEmp.rank} ${selectedEmp.name}`;
+    }
+  }
+}
+
+// ============ 캔버스 ============
+let ctx, drawing = false, hasDrawn = false, lastX, lastY;
+function setupCanvas() {
+  const c = document.getElementById('sig');
+  ctx = c.getContext('2d');
+  ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111';
+  const getPos = (e) => {
+    const r = c.getBoundingClientRect();
+    const sx = c.width / r.width, sy = c.height / r.height;
+    const t = e.touches ? e.touches[0] : e;
+    return { x: (t.clientX - r.left) * sx, y: (t.clientY - r.top) * sy };
+  };
+  const start = (e) => { e.preventDefault(); drawing = true; const p = getPos(e); lastX=p.x; lastY=p.y; };
+  const move = (e) => {
+    if (!drawing) return; e.preventDefault();
+    const p = getPos(e);
+    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y); ctx.stroke();
+    lastX = p.x; lastY = p.y;
+    if (!hasDrawn) { hasDrawn = true; document.getElementById('nextBtn').disabled = false; }
+  };
+  const end = () => { drawing = false; };
+  c.addEventListener('mousedown', start); c.addEventListener('mousemove', move);
+  c.addEventListener('mouseup', end); c.addEventListener('mouseleave', end);
+  c.addEventListener('touchstart', start, { passive:false });
+  c.addEventListener('touchmove', move, { passive:false });
+  c.addEventListener('touchend', end);
+}
+function clearSig() {
+  const c = document.getElementById('sig');
+  ctx.clearRect(0, 0, c.width, c.height);
+  hasDrawn = false;
+  if (step === 3) document.getElementById('nextBtn').disabled = true;
+}
+
+function submitSig() {
+  if (!hasDrawn) return;
+  const c = document.getElementById('sig');
+  const dataURL = c.toDataURL('image/png');
+  const sigs = loadSigs();
+  const key = `${selectedTraining}__${selectedEmp.dept}__${selectedEmp.name}`;
+  const now = new Date();
+  const t = TRAININGS.find(x => x.id === selectedTraining);
+  const record = {
+    training: selectedTraining,
+    trainingName: t.name,
+    dept: selectedEmp.dept,
+    rank: selectedEmp.rank,
+    name: selectedEmp.name,
+    img: dataURL,
+    at: now.toISOString(),
+    atStr: now.toLocaleString('ko-KR'),
+    synced: false
+  };
+  sigs[key] = record;
+  saveSigs(sigs);
+
+  // Google Sheets 전송
+  pushToSheet(record).then(() => {
+    const cur = loadSigs();
+    if (cur[key]) { cur[key].synced = true; saveSigs(cur); }
+  }).catch(() => {});
+
+  document.getElementById('okBody').innerHTML =
+    `[${t.name}]<br><b>${selectedEmp.rank} ${selectedEmp.name}</b>님의 서명이<br>저장되었습니다.` +
+    (getGsUrl() ? '<br><span style="color:#1a73e8; font-size:12px;">📊 Google Sheets로 전송됨</span>' : '');
+  document.getElementById('okModal').classList.add('show');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function resetFlow() {
+  step = 1; selectedTraining = null; selectedDept = null; selectedEmp = null;
+  document.querySelectorAll('.training-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('deptSelect').value = '';
+  document.getElementById('empSelect').innerHTML = '<option value="">— 이름을 선택해 주세요 —</option>';
+  document.getElementById('empSelect').disabled = true;
+  clearSig(); updateUI();
+}
+
+// ============ Google Sheets 전송 ============
+async function pushToSheet(record) {
+  const url = getGsUrl();
+  if (!url) return Promise.resolve();
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        atStr: record.atStr,
+        trainingName: record.trainingName,
+        dept: record.dept,
+        rank: record.rank,
+        name: record.name,
+        img: record.img,
+        userAgent: navigator.userAgent
+      })
+    });
+    return true;
+  } catch (e) { console.warn('GS push failed', e); throw e; }
+}
+
+function saveGsUrl() {
+  const v = document.getElementById('gsUrlInput').value.trim();
+  if (v && !v.startsWith('https://script.google.com/')) {
+    alert('Apps Script 웹앱 URL이 올바르지 않습니다.\nhttps://script.google.com/... 으로 시작해야 합니다.');
+    return;
+  }
+  setGsUrl(v);
+  updateGsCard();
+  alert(v ? 'Google Sheets URL이 저장되었습니다.' : 'URL이 삭제되었습니다.');
+}
+
+function updateGsCard() {
+  const url = getGsUrl();
+  const card = document.getElementById('gsSetup');
+  document.getElementById('gsUrlInput').value = url;
+  if (url) {
+    card.classList.add('ok');
+    card.querySelector('b').textContent = '📊 Google Sheets 연동 활성';
+  } else {
+    card.classList.remove('ok');
+    card.querySelector('b').textContent = '📊 Google Sheets 연동';
+  }
+}
+
+async function syncAll() {
+  if (!getGsUrl()) { alert('먼저 Google Sheets URL을 입력해 주세요.'); return; }
+  const sigs = loadSigs();
+  const pending = Object.entries(sigs).filter(([k, v]) => !v.synced);
+  if (pending.length === 0) { alert('동기화할 신규 서명이 없습니다.'); return; }
+  if (!confirm(`미동기화 서명 ${pending.length}건을 전송하시겠습니까?`)) return;
+  let ok = 0;
+  for (const [k, v] of pending) {
+    try { await pushToSheet(v); sigs[k].synced = true; ok++; } catch(e) {}
+  }
+  saveSigs(sigs);
+  renderAdmin();
+  alert(`${ok}건 동기화 완료 (실패 ${pending.length - ok}건)`);
+}
+
+function openSheet() {
+  const url = getGsUrl();
+  if (!url) { alert('Google Sheets URL이 설정되지 않았습니다.'); return; }
+  // Apps Script URL에서 스프레드시트 ID를 추출할 수 없으므로 안내
+  alert('Apps Script 웹앱은 스프레드시트로 직접 연결되지 않습니다.\n구글 드라이브에서 연결된 스프레드시트를 열어 확인해 주세요.');
+}
+
+// ============ 관리자 ============
+function requestAdmin() {
+  if (isAdmin) { toggleAdmin(false); return; }
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwModal').classList.add('show');
+  setTimeout(() => document.getElementById('pwInput').focus(), 100);
+}
+function verifyPw() {
+  const v = document.getElementById('pwInput').value;
+  if (v === ADMIN_PW) {
+    closeModal('pwModal');
+    toggleAdmin(true);
+  } else {
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').style.borderColor = '#c62828';
+    setTimeout(() => { document.getElementById('pwInput').style.borderColor = ''; }, 800);
+  }
+}
+function lockAdmin() { toggleAdmin(false); }
+function toggleAdmin(on) {
+  isAdmin = on;
+  document.getElementById('userView').style.display = isAdmin ? 'none' : '';
+  document.getElementById('adminView').style.display = isAdmin ? '' : 'none';
+  document.getElementById('modeSwitch').textContent = isAdmin ? '서명모드' : '관리자';
+  if (isAdmin) { updateGsCard(); renderAdmin(); }
+}
+
+function setFilter(f) {
+  adminFilter = f;
+  document.querySelectorAll('.admin-tab').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  renderAdmin();
+}
+
+function getCurrentTraining() { return document.getElementById('adminTrainingSelect').value; }
+
+function renderAdmin() {
+  const tid = getCurrentTraining();
+  const sigs = loadSigs();
+  const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+
+  let total = 0, signed = 0;
+  ORG_ORDER.forEach(dept => {
+    ORG[dept].forEach(p => {
+      total++;
+      if (sigs[`${tid}__${dept}__${p.name}`]) signed++;
+    });
+  });
+  document.getElementById('signedNum').textContent = signed;
+  document.getElementById('unsignedNum').textContent = total - signed;
+  document.getElementById('ratePct').textContent = total ? Math.round(signed/total*100) + '%' : '0%';
+
+  let html = '';
+  ORG_ORDER.forEach(dept => {
+    const arr = ORG[dept];
+    const rows = arr.map(p => {
+      const sig = sigs[`${tid}__${dept}__${p.name}`];
+      return { ...p, dept, sig };
+    }).filter(r => {
+      if (adminFilter === 'signed' && !r.sig) return false;
+      if (adminFilter === 'unsigned' && r.sig) return false;
+      if (q && !(r.name.toLowerCase().includes(q) || dept.toLowerCase().includes(q))) return false;
+      return true;
+    });
+    if (rows.length === 0) return;
+    const deptSigned = arr.filter(p => sigs[`${tid}__${dept}__${p.name}`]).length;
+    html += `<div class="dept-block open">
+      <div class="dept-head" onclick="this.parentElement.classList.toggle('open')">
+        <span>${dept}</span>
+        <span class="ratio">${deptSigned}/${arr.length}</span>
+      </div>
+      <div class="dept-body">
+        ${rows.map(r => `
+          <div class="emp-row">
+            <div>
+              <div>${r.rank} ${r.name}</div>
+              ${r.sig ? `<div class="meta">${r.sig.atStr}</div>` : ''}
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              ${r.sig ? `<img class="sig-thumb" src="${r.sig.img}" alt="서명">` : ''}
+              ${r.sig ? (r.sig.synced ? '<span class="badge-sync">SYNC</span>' : '<span class="badge-pending">대기</span>') : ''}
+              ${r.sig ? '<span class="badge-ok">완료</span>' : '<span class="badge-no">미서명</span>'}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  });
+  if (!html) html = '<div class="empty-state">표시할 항목이 없습니다.</div>';
+  document.getElementById('adminBody').innerHTML = html;
+}
+
+function exportCSV() {
+  const tid = getCurrentTraining();
+  const t = TRAININGS.find(x => x.id === tid);
+  const sigs = loadSigs();
+  let csv = '﻿교육명,부서,직급,이름,서명일시,서명여부,동기화\n';
+  ORG_ORDER.forEach(dept => {
+    ORG[dept].forEach(p => {
+      const s = sigs[`${tid}__${dept}__${p.name}`];
+      csv += `"${t.name}","${dept}","${p.rank}","${p.name}","${s ? s.atStr : ''}","${s ? '완료' : '미서명'}","${s ? (s.synced ? 'Y' : 'N') : ''}"\n`;
+    });
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const today = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `한양전공_${t.name}_서명현황_${today}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function copyUnsigned() {
+  const tid = getCurrentTraining();
+  const sigs = loadSigs();
+  const lines = [];
+  ORG_ORDER.forEach(dept => {
+    ORG[dept].forEach(p => {
+      if (!sigs[`${tid}__${dept}__${p.name}`]) lines.push(`${dept} ${p.rank} ${p.name}`);
+    });
+  });
+  if (!lines.length) { alert('미서명자가 없습니다.'); return; }
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => alert(`미서명자 ${lines.length}명 명단이 클립보드에 복사되었습니다.\n\n` + text.split('\n').slice(0,5).join('\n') + (lines.length > 5 ? '\n...' : '')));
+}
+
+function resetCurrent() {
+  const tid = getCurrentTraining();
+  const t = TRAININGS.find(x => x.id === tid);
+  if (!confirm(`[${t.name}]\n해당 교육의 모든 서명 기록을 삭제할까요?\n(다른 교육 기록은 유지됩니다)\n※ 시트 데이터는 삭제되지 않습니다.`)) return;
+  const sigs = loadSigs();
+  Object.keys(sigs).forEach(k => { if (k.startsWith(tid + '__')) delete sigs[k]; });
+  saveSigs(sigs);
+  renderAdmin();
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
