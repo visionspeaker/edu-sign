@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Google Sheets 연동 가이드 - 한양전공 전자서명</title>
+<title>설치 가이드 - 한양전공 전자서명</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: #f5f6f8; color:#1a1a1a; line-height: 1.6; padding: 20px; }
-  .container { max-width: 760px; margin: 0 auto; background:#fff; border-radius: 18px; padding: 36px 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+  .container { max-width: 780px; margin: 0 auto; background:#fff; border-radius: 18px; padding: 36px 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
   h1 { font-size: 26px; color: #0a3a1e; margin-bottom: 8px; letter-spacing: -1px; }
   .subtitle { color: #666; margin-bottom: 28px; font-size: 14px; }
   h2 { font-size: 18px; margin: 28px 0 12px; color: #0a3a1e; padding-bottom: 8px; border-bottom: 2px solid #e3e6ea; }
@@ -21,20 +21,41 @@
   .tip { background:#fff8e0; border: 1px solid #f3e2a3; padding: 12px 16px; border-radius: 8px; font-size: 13.5px; color: #7a5a00; margin: 12px 0; }
   .tip b { display: block; margin-bottom: 4px; }
   .warn { background:#fdecec; border: 1px solid #f3a3a3; padding: 12px 16px; border-radius: 8px; font-size: 13.5px; color: #7a0a0a; margin: 12px 0; }
+  .info { background:#e8f0fe; border: 1px solid #c5d7f3; padding: 12px 16px; border-radius: 8px; font-size: 13.5px; color: #1a4480; margin: 12px 0; }
+  code { background:#eef0f3; padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: "SF Mono", Menlo, monospace; }
   ol, ul { padding-left: 22px; margin: 8px 0; }
   li { margin: 6px 0; }
   .pill { display: inline-block; background:#eef0f3; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #444; }
+  .flow { display:flex; gap:10px; margin: 18px 0; flex-wrap:wrap; }
+  .flow-step { flex:1; min-width: 130px; background:#f3f9f5; border:1px solid #c8e2d2; border-radius: 10px; padding: 12px; text-align:center; font-size: 13px; color:#0a3a1e; }
+  .flow-step b { display:block; font-size:11px; color:#1f6b3a; margin-bottom: 4px; }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>📊 Google Sheets 연동 가이드</h1>
-  <div class="subtitle">한양전공(주) 법정의무교육 전자서명 시스템</div>
+  <h1>📊 한양전공(주) 전자서명 시스템 설치 가이드</h1>
+  <div class="subtitle">Google Sheets 자동 연동 · GitHub Pages 배포 · 직원 휴대폰 공유</div>
 
-  <p style="font-size: 14.5px; color: #444;">
-    이 가이드를 따라하면 직원이 서명할 때마다 구글 스프레드시트에 자동으로 기록이 쌓입니다.
-    <b>최초 1회만 설정</b>하면 됩니다. 약 5분 소요됩니다.
-  </p>
+  <div class="info">
+    <b>📌 한 줄 요약</b>
+    이 가이드를 따라하면 직원이 자기 휴대폰에서 URL 한 번 열어 서명만 하면 모든 기록이 회사 구글 스프레드시트 한 곳에 자동으로 쌓입니다. 최초 1회 약 15분 설정.
+  </div>
+  <div class="tip">
+    <b>🗓 서명 규칙</b>
+    같은 사람·같은 교육·<b>같은 날짜</b>에는 1번만 서명 가능합니다. 다음 날에는 동일 교육이라도 다시 서명할 수 있고(분기/연간 반복 교육 대비), 같은 날 안에서도 <b>교육 종류가 다르면</b> 추가로 서명할 수 있습니다.
+    <br>예시: 김철수 5/13 산업안전보건 ✓ · 5/13 개인정보보호 ✓ · 5/13 산업안전보건 또 시도 ✗ 차단 · 5/14 산업안전보건 ✓
+  </div>
+
+  <div class="flow">
+    <div class="flow-step"><b>1단계</b>구글 시트 만들기</div>
+    <div class="flow-step"><b>2단계</b>Apps Script 코드 붙여넣기</div>
+    <div class="flow-step"><b>3단계</b>웹앱으로 배포</div>
+    <div class="flow-step"><b>4단계</b>GitHub 업로드</div>
+    <div class="flow-step"><b>5단계</b>최초 설정 & 공유</div>
+  </div>
+  <div class="info" style="background:#f3f9f5; border-color:#bcd9c5; color:#0a3a1e;">
+    <b>✨ 새로워진 점</b> index.html을 메모장에서 편집할 필요가 없습니다. 그대로 GitHub에 올리고, 브라우저에서 한 번 설정하면 됩니다.
+  </div>
 
   <h2>1단계 — 스프레드시트 만들기</h2>
   <div class="step">
@@ -44,86 +65,139 @@
 
   <h2>2단계 — Apps Script 코드 붙여넣기</h2>
   <div class="step">
-    <p><span class="step-num">1</span> 상단 메뉴에서 <b>확장 프로그램 → Apps Script</b>를 클릭합니다.</p>
-    <p><span class="step-num">2</span> 기본 코드를 모두 지우고 아래 코드를 <b>전체 복사 → 붙여넣기</b>합니다.</p>
+    <p><span class="step-num">1</span> 상단 메뉴 <b>확장 프로그램 → Apps Script</b> 클릭</p>
+    <p><span class="step-num">2</span> 기본 코드를 모두 지우고 아래 코드 <b>전체 복사 → 붙여넣기</b></p>
+    <p><span class="step-num">3</span> 💾 저장(Ctrl/⌘+S)</p>
   </div>
 
   <div class="copy-wrap">
     <button class="copy-btn" onclick="copyCode()">📋 복사</button>
 <pre id="code">/**
- * 한양전공(주) 법정의무교육 전자서명 수신 스크립트
- * - POST 요청 시: '서명기록' 시트에 한 줄 추가
- * - 서명 이미지: '서명이미지' 시트에 별도 저장
+ * 한양전공(주) 법정의무교육 전자서명 백엔드
+ * - POST: 서명 1건을 '서명기록' 시트에 추가 (날짜+교육+사람 기준 일별 중복 차단)
+ * - GET ?action=list: 시트의 모든 서명을 JSON으로 반환
+ *
+ * 중복 차단 규칙:
+ *   같은 사람이 같은 교육에 같은 날짜 → 차단
+ *   같은 사람이 같은 교육에 다른 날짜 → 허용 (분기/연간 반복 교육 대비)
+ *   같은 사람이 다른 교육에 같은 날짜 → 허용
  */
-const HEADER = ['일시','교육명','부서','직급','이름','서명이미지(미리보기)','단말정보'];
+const HEADER = ['일시','날짜','교육명','부서','직급','이름','서명이미지','단말정보'];
+const IMG_FOLDER = '한양전공_서명이미지';
+
+function _sheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName('서명기록');
+  if (!sh) {
+    sh = ss.insertSheet('서명기록');
+    sh.appendRow(HEADER);
+    sh.getRange('A1:H1').setFontWeight('bold').setBackground('#1f6b3a').setFontColor('#fff');
+    sh.setFrozenRows(1);
+    sh.setColumnWidth(1, 150);  // 일시
+    sh.setColumnWidth(2, 100);  // 날짜
+    sh.setColumnWidth(3, 220);  // 교육명
+    sh.setColumnWidth(7, 220);  // 서명이미지
+  }
+  return sh;
+}
+
+function _folder() {
+  const it = DriveApp.getFoldersByName(IMG_FOLDER);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(IMG_FOLDER);
+}
+
+function _json(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
 function doPost(e) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName('서명기록');
-    if (!sheet) {
-      sheet = ss.insertSheet('서명기록');
-      sheet.appendRow(HEADER);
-      sheet.getRange('A1:G1').setFontWeight('bold').setBackground('#1f6b3a').setFontColor('#fff');
-      sheet.setFrozenRows(1);
-      sheet.setColumnWidth(1, 150);
-      sheet.setColumnWidth(2, 200);
-      sheet.setColumnWidth(6, 220);
-    }
+    const sh = _sheet();
     const data = JSON.parse(e.postData.contents);
+    const atDate = data.atDate || Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
 
-    // 서명 이미지를 Drive에 저장하고 IMAGE 함수로 시트에 표시
+    // 서버 측 중복 차단: 같은 날짜 + 같은 교육 + 같은 사람
+    const all = sh.getDataRange().getValues();
+    for (let i = 1; i < all.length; i++) {
+      const rowDate = typeof all[i][1] === 'string'
+        ? all[i][1]
+        : Utilities.formatDate(new Date(all[i][1]), 'Asia/Seoul', 'yyyy-MM-dd');
+      if (rowDate === atDate &&
+          all[i][2] === data.trainingName &&
+          all[i][3] === data.dept &&
+          all[i][5] === data.name) {
+        return _json({
+          ok: false, error: 'duplicate',
+          message: '같은 날짜에 이미 동일 교육 서명이 존재합니다.'
+        });
+      }
+    }
+
+    // 서명 이미지를 드라이브에 저장 + 시트에 IMAGE 미리보기
     let imageFormula = '';
     if (data.img && data.img.startsWith('data:image/')) {
       const blob = Utilities.newBlob(
         Utilities.base64Decode(data.img.split(',')[1]),
         'image/png',
-        `${data.dept}_${data.name}_${new Date().getTime()}.png`
+        `${atDate}_${data.dept}_${data.name}_${new Date().getTime()}.png`
       );
-      // 같은 폴더에 이미지 저장
-      const folder = getOrCreateFolder_('한양전공_서명이미지');
-      const file = folder.createFile(blob);
+      const file = _folder().createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      const id = file.getId();
-      imageFormula = `=IMAGE("https://drive.google.com/uc?export=view&id=${id}", 4, 30, 90)`;
+      imageFormula = `=IMAGE("https://drive.google.com/uc?export=view&id=${file.getId()}", 4, 30, 90)`;
     }
 
-    const row = [
+    sh.appendRow([
       data.atStr || new Date().toLocaleString('ko-KR'),
+      atDate,
       data.trainingName || '',
       data.dept || '',
       data.rank || '',
       data.name || '',
       '',
       data.userAgent || ''
-    ];
-    sheet.appendRow(row);
+    ]);
     if (imageFormula) {
-      const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow, 6).setFormula(imageFormula);
-      sheet.setRowHeight(lastRow, 50);
+      const lr = sh.getLastRow();
+      sh.getRange(lr, 7).setFormula(imageFormula);
+      sh.setRowHeight(lr, 50);
     }
-
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true, row: sheet.getLastRow() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return _json({ ok: true, row: sh.getLastRow() });
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return _json({ ok: false, error: err.toString() });
   }
 }
 
 function doGet(e) {
-  return ContentService
-    .createTextOutput('한양전공(주) 전자서명 수신 API 정상 작동')
-    .setMimeType(ContentService.MimeType.TEXT);
-}
-
-function getOrCreateFolder_(name) {
-  const it = DriveApp.getFoldersByName(name);
-  if (it.hasNext()) return it.next();
-  return DriveApp.createFolder(name);
+  try {
+    if (e && e.parameter && e.parameter.action === 'list') {
+      const sh = _sheet();
+      const all = sh.getDataRange().getValues();
+      const records = [];
+      for (let i = 1; i < all.length; i++) {
+        const row = all[i];
+        if (!row[2] || !row[5]) continue;
+        const atDate = typeof row[1] === 'string'
+          ? row[1]
+          : Utilities.formatDate(new Date(row[1]), 'Asia/Seoul', 'yyyy-MM-dd');
+        records.push({
+          atStr: typeof row[0] === 'string' ? row[0] : new Date(row[0]).toLocaleString('ko-KR'),
+          atDate: atDate,
+          trainingName: row[2],
+          dept: row[3],
+          rank: row[4],
+          name: row[5]
+        });
+      }
+      return _json({ ok: true, records });
+    }
+    return ContentService
+      .createTextOutput('한양전공(주) 전자서명 API 정상 작동 · ' + new Date().toLocaleString('ko-KR'))
+      .setMimeType(ContentService.MimeType.TEXT);
+  } catch (err) {
+    return _json({ ok: false, error: err.toString() });
+  }
 }</pre>
   </div>
 
@@ -131,50 +205,68 @@ function getOrCreateFolder_(name) {
   <div class="step">
     <p><span class="step-num">1</span> 우측 상단 <b>배포 → 새 배포</b> 클릭</p>
     <p><span class="step-num">2</span> 유형 선택 옆 ⚙ 톱니바퀴 → <b>웹 앱</b> 선택</p>
-    <p><span class="step-num">3</span> 다음과 같이 설정:</p>
+    <p><span class="step-num">3</span> 설정:</p>
     <ul>
       <li>설명: <span class="pill">한양전공 전자서명 v1</span></li>
       <li>다음 사용자로 실행: <b>나</b></li>
       <li>액세스 권한이 있는 사용자: <b>모든 사용자</b></li>
     </ul>
-    <p><span class="step-num">4</span> <b>배포</b> 클릭 → 권한 승인 요청이 나오면 <b>액세스 승인 → 본인 계정 선택 → 고급 → "(안전하지 않음) 이동" → 허용</b></p>
-    <p><span class="step-num">5</span> 표시된 <b>웹 앱 URL</b>을 복사해 둡니다. (https://script.google.com/macros/s/...../exec 형태)</p>
+    <p><span class="step-num">4</span> <b>배포</b> → 권한 승인 요청 시 <b>액세스 승인 → 본인 계정 → 고급 → "(안전하지 않음) 이동" → 허용</b></p>
+    <p><span class="step-num">5</span> 표시된 <b>웹 앱 URL 복사</b> (https://script.google.com/macros/s/...../exec)</p>
   </div>
 
   <div class="warn">
     <b>⚠ "안전하지 않음" 경고가 뜨는 이유</b>
-    구글에서 검증하지 않은 본인 작성 스크립트이기 때문이며, 본인 회사 시트에만 쓰는 코드이므로 안전합니다. "고급 → 이동 → 허용"으로 진행하시면 됩니다.
+    구글이 검증하지 않은 본인 작성 스크립트이기 때문이며, 본인 회사 시트에만 쓰는 코드이므로 안전합니다. "고급 → 이동 → 허용"으로 진행하시면 됩니다.
   </div>
 
-  <h2>4단계 — 서명 시스템에 URL 등록</h2>
+  <h2>4단계 — GitHub Pages에 그대로 업로드</h2>
   <div class="step">
-    <p><span class="step-num">1</span> <b>한양전공_교육서명시스템.html</b>을 엽니다.</p>
-    <p><span class="step-num">2</span> 우측 상단 <b>관리자</b> 버튼 클릭 → 비밀번호 <span class="pill">123456</span> 입력</p>
-    <p><span class="step-num">3</span> 상단 <b>📊 Google Sheets 연동</b> 카드에 3단계에서 복사한 URL 붙여넣기 → <b>저장</b></p>
-    <p><span class="step-num">4</span> 카드가 초록색으로 변하면 연동 완료. 이제 서명할 때마다 시트에 자동 기록됩니다.</p>
+    <p><span class="step-num">1</span> <a href="https://github.com" target="_blank">github.com</a> 로그인 → 본인 저장소(예: <code>edu-sign</code>)로 이동</p>
+    <p><span class="step-num">2</span> <b>Add file → Upload files</b> 클릭 → <b>index.html</b>과 <b>guide.html</b>을 <b>편집 없이 그대로</b> 끌어다 놓기</p>
+    <p><span class="step-num">3</span> 화면 하단 <b>Commit changes</b> 클릭</p>
+    <p><span class="step-num">4</span> Settings → Pages 메뉴에서 Pages가 켜져 있으면 1~2분 뒤 자동 반영됩니다.</p>
   </div>
 
-  <h2>5단계 — 확인 및 운영</h2>
+  <h2>5단계 — 최초 설정 & 직원 공유</h2>
   <div class="step">
-    <p>직원이 한 명 서명한 후 스프레드시트로 돌아가면 <b>서명기록</b> 시트에 한 줄이 추가되고, 서명 이미지가 <b>구글 드라이브 → 한양전공_서명이미지</b> 폴더에 자동 저장됩니다.</p>
-    <p>이전에 로컬에만 저장된 서명들은 관리자 메뉴 <b>🔄 전체 동기화</b> 버튼으로 일괄 전송할 수 있습니다.</p>
+    <p><span class="step-num">1</span> <code>https://[사용자명].github.io/edu-sign/</code> 주소를 본인 PC나 휴대폰에서 엽니다.</p>
+    <p><span class="step-num">2</span> "⏳ 시스템 준비 중입니다" 화면이 뜨면 하단의 <b>관리자 설정</b> 버튼 클릭 → 비밀번호 <span class="pill">123456</span> 입력</p>
+    <p><span class="step-num">3</span> 🚀 최초 1회 설정 화면에서 3단계에서 복사한 Apps Script URL을 붙여넣고 <b>공유 URL 생성</b> 클릭</p>
+    <p><span class="step-num">4</span> 생성된 공유 URL(<code>...github.io/edu-sign/?gs=...</code>)을 <b>📋 URL 복사하기</b> 버튼으로 복사</p>
+    <p><span class="step-num">5</span> 복사한 URL을 카톡 단체방·문자·이메일로 직원들에게 공유. 관리자 본인도 이 URL을 북마크해 두세요.</p>
   </div>
 
-  <div class="tip">
-    <b>💡 운영 팁</b>
-    여러 부서/지점이 같은 시트로 동시에 기록할 수 있습니다. URL만 공유하면 모든 단말의 서명이 한 시트에 모입니다. 단말이 인터넷이 안 되는 환경이면 로컬에 저장됐다가 다음 접속 시 <b>전체 동기화</b>로 올리세요.
+  <div class="info">
+    <b>✅ 잘 설정됐는지 확인하는 법</b>
+    생성된 공유 URL을 열어 우측 상단 <b>관리자 → 123456</b>을 입력하면 상단에 <b>"📡 Google Sheets 연결됨"</b> 초록 카드가 떠야 합니다.
+    빨간 카드(<b>✕ 연결 실패</b>)가 뜨면 Apps Script URL이 잘못되었거나 권한 설정 문제이므로 3단계를 다시 확인해 주세요.
   </div>
 
-  <div class="tip" style="background:#e8f0fe; border-color:#c5d7f3; color:#1a4480;">
-    <b>🔒 보안 안내</b>
-    관리자 비밀번호 <b>123456</b>은 HTML 소스를 보면 노출됩니다. 외부 공유 환경이라면 HTML 파일을 열어 <code>const ADMIN_PW = '123456';</code> 부분의 값을 변경해 주세요.
+  <h2>운영 흐름</h2>
+  <div class="step">
+    <p>1) <b>교육 진행 후</b> 카톡으로 URL 전송 → "각자 휴대폰에서 30초 안에 서명해주세요" 안내</p>
+    <p>2) <b>직원</b>: URL 접속 → 교육 선택 → 부서/이름 선택 → 손가락으로 서명 → 제출</p>
+    <p>3) <b>관리자</b>: 본인 휴대폰/PC에서 같은 URL 열고 관리자 진입 → 실시간으로 서명 현황 확인 → 미서명자 명단 복사해서 미참석자에게 푸시</p>
+    <p>4) <b>스프레드시트 확인</b>: 구글 시트에 직접 들어가면 일시/교육명/부서/직급/이름과 함께 <b>서명 이미지 미리보기</b>까지 한 줄씩 쌓여 있습니다. 그대로 PDF로 출력하여 법정의무교육 증빙으로 제출하시면 됩니다.</p>
+  </div>
+
+  <h2>주의사항</h2>
+  <div class="warn">
+    <b>🔒 관리자 비밀번호</b>
+    기본값 <b>123456</b>은 HTML 소스에 노출됩니다. 외부 공유 환경에서는 index.html을 열어 <code>const ADMIN_PW = '123456';</code> 부분을 회사 내부에서만 아는 값으로 바꾸시기 바랍니다.
+  </div>
+  <div class="warn">
+    <b>🔗 Apps Script URL 보안</b>
+    GS_URL은 GitHub에 공개됩니다. 누구나 POST해서 가짜 서명을 넣을 수 있다는 의미입니다. 71명 규모 사내 운영에서는 보통 문제 없지만, 가짜 서명이 발견되면 관리자가 시트에서 직접 행을 삭제하면 됩니다.
   </div>
 
   <h2>문제 해결</h2>
   <ul>
-    <li><b>서명해도 시트에 안 들어와요</b> — 관리자 화면에서 URL이 저장됐는지, https://script.google.com/macros/.../exec 으로 끝나는지 확인. 끝이 <code>/dev</code>가 아닌 <code>/exec</code>여야 합니다.</li>
-    <li><b>이미지가 #REF! 로 표시돼요</b> — 시트 셀에서 셀 우클릭 → 이미지 → IMAGE 함수 새로고침 또는 페이지 새로고침.</li>
-    <li><b>스크립트 수정 후 적용이 안 됨</b> — 배포 → 배포 관리 → 연필(편집) 아이콘 → 버전 "새 버전" → 배포.</li>
+    <li><b>관리자 화면에 "연결 실패"</b> — index.html의 GS_URL이 따옴표 포함해서 정확히 들어갔는지, URL 끝이 <code>/exec</code>인지 확인 (끝이 <code>/dev</code>면 안 됨)</li>
+    <li><b>중복 서명이 안 막혀요</b> — 서명 후 시트에 데이터가 들어왔는지 먼저 확인. 시트에 들어왔다면 다른 폰에서 다시 열었을 때 첫 로딩이 끝나고 중복 차단이 작동합니다 (약 2초).</li>
+    <li><b>이미지가 #REF! 로 표시돼요</b> — 시트 새로고침 또는 IMAGE 함수 재계산.</li>
+    <li><b>코드를 수정했는데 적용이 안 됨</b> — Apps Script에서 <b>배포 → 배포 관리 → 연필(편집) → 버전 "새 버전"</b>으로 재배포 필요.</li>
   </ul>
 
 </div>
