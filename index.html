@@ -3,7 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>한양전공(주) 법정의무교육 전자서명</title>
+<title>한양전공(주) 법정의무교육 전자서명 시스템</title>
+
+<!--
+  ============================================================================
+  설정 방법: 코드 편집 불필요!
+
+  1) 이 파일을 GitHub에 그대로 업로드
+  2) GitHub Pages URL을 처음 열면 "최초 설정" 화면이 나옴
+  3) Apps Script URL을 붙여넣으면 직원 공유용 URL이 자동 생성됨
+  4) 그 URL을 카카오톡으로 공유하면 끝
+
+  배포 방법은 guide.html 파일을 참고하세요.
+  ============================================================================
+-->
+<script>
+  // URL 파라미터 ?gs=... 가 우선, 없으면 아래 기본값 사용
+  const _params = new URLSearchParams(location.search);
+  const _paramGs = _params.get('gs');
+  const _DEFAULT_GS = ''; // 코드 수정 없이도 동작합니다 (아래 최초 설정 화면 사용)
+  const GS_URL = (_paramGs && _paramGs.startsWith('https://script.google.com/'))
+    ? _paramGs
+    : _DEFAULT_GS;
+</script>
+
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:#f5f6f8; color:#1a1a1a; }
@@ -35,17 +58,15 @@
   .field-body { flex:1; min-width:0; }
   .field-label { font-size:11px; color:#888; }
   .field-value { font-size:15px; font-weight:600; margin-top:2px; }
-  .field-value.placeholder { color:#aaa; font-weight:400; }
-  select, .selector, input[type="text"], input[type="password"], input[type="url"] { width:100%; padding:14px 16px; border:2px solid #eef0f3; border-radius:14px; font-size:15px; background:#fff; font-family:inherit; -webkit-appearance:none; appearance:none; }
+  select, input[type="text"], input[type="password"], input[type="url"] { width:100%; padding:14px 16px; border:2px solid #eef0f3; border-radius:14px; font-size:15px; background:#fff; font-family:inherit; -webkit-appearance:none; appearance:none; }
   select:focus, input:focus { outline:none; border-color:#1f6b3a; }
-  .selector { cursor:pointer; display:flex; align-items:center; gap:12px; }
   .signature-area { margin: 0 16px 20px; }
   .signature-meta { background:#f7f8fa; padding:12px 16px; border-radius:10px 10px 0 0; border:2px solid #eef0f3; border-bottom:none; display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#444; font-weight:600; }
   .signature-meta .reset { color:#1f6b3a; cursor:pointer; font-weight:600; }
   .signature-canvas-wrap { background:#fff; border:2px solid #eef0f3; border-top:none; border-radius:0 0 10px 10px; padding:8px; }
   canvas { width:100%; height:240px; touch-action:none; display:block; background:linear-gradient(#fff,#fff) padding-box; }
   .sig-label { text-align:center; color:#bbb; font-size:11px; letter-spacing:3px; padding-top:6px; border-top:1px dashed #ddd; margin: 8px 16px 0; }
-  .bottom-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; padding:14px 16px 24px; background:linear-gradient(to top, #fff 80%, transparent); display:flex; gap:8px; }
+  .bottom-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; padding:14px 16px 24px; background:linear-gradient(to top, #fff 80%, transparent); display:flex; gap:8px; z-index: 10; }
   .btn { flex:1; padding:16px; border-radius:14px; border:none; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
   .btn-primary { background:#1f6b3a; color:#fff; }
   .btn-primary:disabled { background:#c2cbc4; cursor:not-allowed; }
@@ -56,12 +77,12 @@
   .modal-icon { width:52px; height:52px; border-radius:50%; background:#fde8e8; color:#c62828; display:flex; align-items:center; justify-content:center; font-size:24px; margin: 0 auto 16px; }
   .modal-icon.ok { background:#e6f4ec; color:#1f6b3a; }
   .modal-icon.lock { background:#eef0f3; color:#444; }
+  .modal-icon.warn { background:#fff4e0; color:#b76b00; }
   .modal-title { font-size:18px; font-weight:800; margin-bottom:10px; }
   .modal-body { font-size:14px; color:#555; line-height:1.6; margin-bottom:20px; }
   .modal-btn { width:100%; padding:14px; background:#1f6b3a; color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
   .modal-btn.ghost { background:#eef0f3; color:#333; margin-top:8px; }
   .modal input { margin-bottom: 10px; text-align:center; letter-spacing: 4px; font-size:18px; }
-  .footer-link { text-align:center; padding: 30px 16px 10px; font-size:12px; color:#999; }
   /* Admin */
   .admin-view { padding: 20px 20px 120px; }
   .admin-title { font-size:22px; font-weight:800; margin-bottom: 4px; }
@@ -83,8 +104,6 @@
   .emp-row .meta { font-size:11px; color:#888; }
   .badge-ok { background:#e6f4ec; color:#1f6b3a; padding:3px 8px; border-radius:10px; font-size:11px; font-weight:700; }
   .badge-no { background:#fdecec; color:#c62828; padding:3px 8px; border-radius:10px; font-size:11px; font-weight:700; }
-  .badge-sync { background:#e8f0fe; color:#1a73e8; padding:3px 7px; border-radius:10px; font-size:10px; font-weight:700; }
-  .badge-pending { background:#fff4e0; color:#b76b00; padding:3px 7px; border-radius:10px; font-size:10px; font-weight:700; }
   .sig-thumb { width:60px; height:30px; background:#fff; border:1px solid #eee; border-radius:4px; }
   .toolbar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
   .toolbar button { flex:1; min-width: 30%; padding:10px; border:1px solid #ddd; background:#fff; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; font-family:inherit; }
@@ -94,20 +113,109 @@
   .search-box:focus { outline:none; border-color:#1f6b3a; }
   .empty-state { text-align:center; padding:40px 20px; color:#aaa; font-size:14px; }
   .mode-switch { position:absolute; top:18px; right:16px; background:#eef0f3; color:#444; padding:6px 12px; border-radius:14px; font-size:11px; font-weight:700; cursor:pointer; border:none; font-family:inherit; }
-  .setup-card { background:#fffbf0; border:1px solid #f3e2a3; padding:14px; border-radius:12px; margin-bottom:14px; font-size:13px; color:#7a5a00; line-height:1.6; }
-  .setup-card.ok { background:#f3f9f5; border-color:#bcd9c5; color:#0a3a1e; }
-  .setup-card b { display:block; margin-bottom:6px; }
-  .setup-card a { color:#1a73e8; text-decoration:none; font-weight:600; }
-  .gs-row { display:flex; gap:6px; margin-top:8px; }
-  .gs-row input { flex:1; padding:10px 12px; font-size:13px; border-radius:10px; }
-  .gs-row button { padding:10px 14px; border:none; background:#1f6b3a; color:#fff; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; }
-  @media (min-width: 600px) {
-    .app { box-shadow: 0 0 30px rgba(0,0,0,.06); }
-  }
+  .conn-card { padding:14px; border-radius:12px; margin-bottom:14px; font-size:13px; line-height:1.6; display:flex; justify-content:space-between; align-items:center; }
+  .conn-card.ok { background:#f3f9f5; border:1px solid #bcd9c5; color:#0a3a1e; }
+  .conn-card.bad { background:#fdecec; border:1px solid #f3a3a3; color:#7a0a0a; }
+  .conn-card.warn { background:#fff8e0; border:1px solid #f3e2a3; color:#7a5a00; }
+  .conn-card .right { display:flex; gap:6px; }
+  .conn-card button { padding:6px 10px; border:1px solid currentColor; background:transparent; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; color:inherit; font-family:inherit; }
+  .sync-banner { position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#1a73e8; color:#fff; padding:8px 16px; font-size:12px; text-align:center; z-index:999; display:none; }
+  /* Setup wizard */
+  .setup-screen { padding: 32px 24px; min-height: 100vh; }
+  .setup-screen h1 { font-size: 24px; color:#0a3a1e; margin-bottom: 6px; }
+  .setup-screen .lead { color:#666; font-size: 14px; margin-bottom: 24px; line-height:1.6; }
+  .setup-screen .info-box { background:#e8f0fe; border:1px solid #c5d7f3; padding: 12px 14px; border-radius:10px; font-size:13px; color:#1a4480; line-height:1.6; margin: 14px 0; }
+  .setup-screen .warn-box { background:#fff8e0; border:1px solid #f3e2a3; padding: 12px 14px; border-radius:10px; font-size:13px; color:#7a5a00; line-height:1.6; margin: 14px 0; }
+  .setup-screen label { display:block; font-size:13px; font-weight:700; margin: 18px 0 6px; color:#0a3a1e; }
+  .setup-screen input[type=url], .setup-screen input[type=password] { width:100%; padding:14px; border:2px solid #eef0f3; border-radius:10px; font-size:14px; font-family:inherit; }
+  .setup-screen .btn-big { width:100%; padding:16px; background:#1f6b3a; color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:700; cursor:pointer; margin-top: 16px; font-family:inherit; }
+  .setup-screen .btn-big:disabled { background:#c2cbc4; cursor:not-allowed; }
+  .setup-screen .result-box { background:#f3f9f5; border:2px solid #1f6b3a; padding:16px; border-radius:12px; margin-top: 18px; }
+  .setup-screen .result-box .label { font-size:11px; color:#1f6b3a; font-weight:700; margin-bottom: 6px; letter-spacing: 1px; }
+  .setup-screen .result-url { word-break: break-all; font-size:13px; color:#0a3a1e; background:#fff; padding:10px; border-radius:8px; border:1px solid #c8e2d2; font-family: monospace; }
+  .setup-screen .btn-copy { width:100%; padding:12px; background:#0a3a1e; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; margin-top:8px; font-family:inherit; }
+  .setup-screen .helper { font-size:12px; color:#888; text-align:center; margin-top: 20px; }
+  .setup-screen .helper a { color:#1a73e8; text-decoration:none; font-weight:600; }
+  .setup-blocked { padding: 60px 24px; text-align:center; }
+  .setup-blocked .icon { font-size:48px; margin-bottom: 16px; }
+  .setup-blocked .ttl { font-size: 18px; font-weight:700; color:#0a3a1e; margin-bottom:8px; }
+  .setup-blocked .msg { color:#666; font-size:14px; line-height:1.6; margin-bottom: 20px; }
+  .setup-blocked .small-link { color:#1a73e8; font-size:12px; cursor:pointer; text-decoration:underline; background:none; border:none; padding:8px; font-family:inherit; }
+  @media (min-width: 600px) { .app { box-shadow: 0 0 30px rgba(0,0,0,.06); } }
 </style>
 </head>
 <body>
-<div class="app" id="app">
+<div class="sync-banner" id="syncBanner">📡 서명 기록 동기화 중...</div>
+
+<!-- 일반 사용자: URL이 설정 안 된 채로 접속한 경우 -->
+<div class="app" id="blockedApp" style="display:none;">
+  <div class="setup-blocked">
+    <div class="icon">⏳</div>
+    <div class="ttl">시스템 준비 중입니다</div>
+    <div class="msg">관리자가 시스템 설정을 마치면<br>이용하실 수 있습니다.<br><br>관리자에게 문의해 주세요.</div>
+    <button class="small-link" onclick="showSetupGate()">관리자 설정</button>
+  </div>
+</div>
+
+<!-- 관리자: 최초 1회 설정 화면 -->
+<div class="app" id="setupApp" style="display:none;">
+  <div class="setup-screen">
+    <h1>🚀 최초 1회 설정</h1>
+    <div class="lead">
+      한양전공(주) 전자서명 시스템에 오신 것을 환영합니다.<br>
+      직원과 공유할 URL을 1분 안에 만들어 드립니다.
+    </div>
+
+    <div class="info-box">
+      <b>📋 사전 준비</b><br>
+      <a href="guide.html" target="_blank" style="color:#1a73e8;">guide.html</a> 1~3단계를 따라 Google Apps Script를 배포하고
+      <code style="background:#fff; padding:1px 5px; border-radius:3px;">https://script.google.com/macros/s/.../exec</code> URL을 발급받아 주세요.
+    </div>
+
+    <label for="setupUrlInput">Apps Script 웹앱 URL</label>
+    <input type="url" id="setupUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+    <button class="btn-big" id="setupGenBtn" onclick="generateShareUrl()">공유 URL 생성</button>
+
+    <div id="setupResult" style="display:none;">
+      <div class="result-box">
+        <div class="label">📤 직원에게 공유할 URL</div>
+        <div class="result-url" id="shareUrlText"></div>
+        <button class="btn-copy" onclick="copyShareUrl()">📋 URL 복사하기</button>
+      </div>
+      <div class="info-box">
+        <b>✅ 다음 단계</b><br>
+        위 URL을 카카오톡 단체방·문자·이메일로 직원들에게 공유하세요. 직원들은 본인 휴대폰에서 이 URL을 열어 바로 서명할 수 있습니다.
+        <br><br>
+        관리자(본인)도 같은 URL을 북마크해 두시면 우측 상단 "관리자" 버튼으로 서명 현황을 언제든 확인할 수 있습니다.
+      </div>
+      <button class="btn-big" style="background:#1a73e8;" onclick="goToShareUrl()">지금 바로 이동하기 →</button>
+    </div>
+
+    <div class="warn-box" style="margin-top:24px;">
+      <b>⚠ 보안 안내</b><br>
+      Apps Script URL은 GitHub 소스에 노출됩니다. 71명 규모 사내 운영에서는 보통 문제 없지만, 가짜 서명이 발견되면 관리자가 시트에서 직접 행을 삭제하면 됩니다. 관리자 비밀번호 기본값 <b>123456</b>도 코드에 노출되니 외부 공유 시 주의하세요.
+    </div>
+
+    <div class="helper">
+      이 화면은 최초 관리자만 보게 됩니다.<br>
+      다음부터는 위에서 생성한 URL로 접속하면 바로 서명 화면이 나옵니다.
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 인증 모달 (블록 화면에서 호출) -->
+<div class="modal-bg" id="setupGateModal">
+  <div class="modal">
+    <div class="modal-icon lock">🔒</div>
+    <div class="modal-title">관리자 인증</div>
+    <div class="modal-body">시스템 최초 설정은 관리자만 가능합니다.<br>비밀번호를 입력해 주세요.</div>
+    <input type="password" id="setupGateInput" maxlength="6" inputmode="numeric" placeholder="••••••" autocomplete="off">
+    <button class="modal-btn" onclick="verifySetupGate()">확인</button>
+    <button class="modal-btn ghost" onclick="closeModal('setupGateModal')">취소</button>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none;">
   <button class="mode-switch" id="modeSwitch" onclick="requestAdmin()">관리자</button>
 
   <!-- USER VIEW -->
@@ -118,7 +226,7 @@
     </div>
     <div class="title-area">
       <div class="logo-text">한양전공(주)</div>
-      <div class="subtitle">법정의무교육 전자서명</div>
+      <div class="subtitle">법정의무교육 전자서명 시스템</div>
     </div>
     <div class="progress-bar">
       <div class="progress-seg active" id="p1"></div>
@@ -179,19 +287,17 @@
       <div class="admin-title">서명 현황 관리</div>
       <div class="admin-sub">한양전공(주) · 총 인원 <span id="totalCount">71</span>명</div>
 
-      <div class="setup-card" id="gsSetup">
-        <b>📊 Google Sheets 연동</b>
-        Apps Script 웹앱 URL을 입력하면 서명 시 자동으로 스프레드시트에 기록됩니다.
-        <div class="gs-row">
-          <input type="url" id="gsUrlInput" placeholder="https://script.google.com/.../exec">
-          <button onclick="saveGsUrl()">저장</button>
-        </div>
-        <div style="margin-top:8px; font-size:12px;">
-          설치 방법은 함께 제공된 <b>구글시트_연동_가이드.html</b> 파일을 참고하세요.
+      <div class="conn-card" id="connCard">
+        <div><b id="connTitle">📡 연동 확인 중...</b><div id="connSub" style="font-size:12px; margin-top:2px;"></div></div>
+        <div class="right">
+          <button onclick="reloadRemote()">↻ 새로고침</button>
         </div>
       </div>
 
-      <select class="search-box training-select-admin" id="adminTrainingSelect" onchange="renderAdmin()"></select>
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <select class="search-box training-select-admin" id="adminTrainingSelect" onchange="renderAdmin()" style="flex:2; margin-bottom:0;"></select>
+        <input type="date" class="search-box" id="adminDateSelect" onchange="renderAdmin()" style="flex:1; margin-bottom:0;">
+      </div>
 
       <div class="stat-grid">
         <div class="stat-card"><div class="stat-num" id="signedNum">0</div><div class="stat-lbl">서명 완료</div></div>
@@ -208,11 +314,8 @@
       <input type="text" class="search-box" id="searchInput" placeholder="이름 또는 부서 검색" oninput="renderAdmin()">
 
       <div class="toolbar">
-        <button class="primary" onclick="openSheet()">📊 시트 열기</button>
-        <button onclick="syncAll()">🔄 전체 동기화</button>
         <button onclick="exportCSV()">📥 CSV 내보내기</button>
         <button onclick="copyUnsigned()">📋 미서명자 복사</button>
-        <button class="danger" onclick="resetCurrent()">🗑 교육 초기화</button>
         <button onclick="lockAdmin()">🔒 잠금</button>
       </div>
 
@@ -251,137 +354,126 @@
       <button class="modal-btn" onclick="closeModal('okModal'); resetFlow()">확인</button>
     </div>
   </div>
+
+  <!-- MODAL: setup warning -->
+  <div class="modal-bg" id="setupModal">
+    <div class="modal">
+      <div class="modal-icon warn">⚠</div>
+      <div class="modal-title">시스템 설정 필요</div>
+      <div class="modal-body">Google Sheets URL이 설정되지 않았습니다.<br>관리자는 index.html의 GS_URL 값을 수정한 뒤<br>GitHub에 다시 업로드해 주세요.</div>
+      <button class="modal-btn" onclick="closeModal('setupModal')">확인</button>
+    </div>
+  </div>
 </div>
 
 <script>
 // ============ 데이터 ============
 const TRAININGS = [
-  { id:'safety',   icon:'🦺', name:'산업안전보건 교육',          desc:'산업재해 예방, 작업장 안전수칙, 보호구 사용법' },
-  { id:'privacy',  icon:'🔐', name:'개인정보보호 교육',          desc:'개인정보보호법 주요 내용, 업무 적용 사례' },
-  { id:'harass',   icon:'⚖️', name:'직장 내 성희롱 예방 교육',   desc:'성희롱 정의, 예방 및 대처 방법, 피해자 지원 절차' },
-  { id:'bully',    icon:'🤝', name:'직장 내 괴롭힘 예방 교육',   desc:'직장 내 괴롭힘 정의, 예방 및 대응 절차' },
-  { id:'disabled', icon:'♿', name:'장애인 인식개선 교육',       desc:'장애 이해, 차별 금지, 정당한 편의 제공' },
-  { id:'pension',  icon:'💰', name:'퇴직연금 가입자 교육',       desc:'DB/DC형 제도 안내, 운용방법, 수령방법' }
+  { id:'safety',     icon:'🦺', name:'안전보건교육',   desc:'정기 안전보건 교육 (산업안전보건법)' },
+  { id:'mandatory',  icon:'📋', name:'법정의무교육',   desc:'개인정보보호·성희롱·괴롭힘·장애인 인식개선 등' },
+  { id:'special',    icon:'⚠️', name:'특별교육',       desc:'유해·위험작업 종사자 별도 안전교육' },
+  { id:'adhoc',      icon:'💡', name:'수시교육',       desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' }
 ];
+const NAME_TO_ID = {};
+TRAININGS.forEach(t => NAME_TO_ID[t.name] = t.id);
 
-// 한양전공(주) 조직도 — 일일업무보고 상의 부서 순서 적용
 const ORG_ORDER = [
   '수배전영업부', '설계부', '생산관리부', '자재관리부',
   '품질보증부', '고객지원부', '신재생에너지사업부',
-  '부설연구소', '경영지원부', '신사업부', '임원'
+  '부설연구소', '신사업부', '경영지원부', '임원'
 ];
 const ORG = {
   '수배전영업부': [
-    { rank:'부사장', name:'임웅걸' },
-    { rank:'차장',  name:'양정인' },
-    { rank:'대리',  name:'양희철' },
-    { rank:'대리',  name:'김지현' }
+    { rank:'부사장', name:'임웅걸' }, { rank:'차장', name:'양정인' },
+    { rank:'대리', name:'양희철' }, { rank:'대리', name:'김지현' }
   ],
   '설계부': [
-    { rank:'부사장', name:'양수근' },
-    { rank:'이사',  name:'노영훈' },
-    { rank:'팀장',  name:'정언' },
-    { rank:'차장',  name:'김선유' },
-    { rank:'차장',  name:'이동윤' },
-    { rank:'과장',  name:'김영훈' },
-    { rank:'주임',  name:'주성표' },
-    { rank:'주임',  name:'함승민' }
+    { rank:'부사장', name:'양수근' }, { rank:'이사', name:'노영훈' },
+    { rank:'팀장', name:'정언' }, { rank:'차장', name:'김선유' },
+    { rank:'차장', name:'이동윤' }, { rank:'과장', name:'김영훈' },
+    { rank:'주임', name:'주성표' }, { rank:'주임', name:'함승민' }
   ],
   '생산관리부': [
-    { rank:'부장',  name:'양정민' },
-    { rank:'차장',  name:'김대위' },
-    { rank:'주임',  name:'박주호' },
-    { rank:'주임',  name:'김태훈' },
-    { rank:'주임',  name:'임남훈' },
-    { rank:'사원',  name:'김동주' },
-    { rank:'사원',  name:'박율' },
-    { rank:'사원',  name:'김유중' },
-    { rank:'사원',  name:'임도현' },
-    { rank:'사원',  name:'황준우' },
-    { rank:'사원',  name:'얀린' }
+    { rank:'부장', name:'양정민' }, { rank:'차장', name:'김대위' },
+    { rank:'주임', name:'박주호' }, { rank:'주임', name:'김태훈' },
+    { rank:'주임', name:'임남훈' }, { rank:'사원', name:'김동주' },
+    { rank:'사원', name:'박율' }, { rank:'사원', name:'김유중' },
+    { rank:'사원', name:'임도현' }, { rank:'사원', name:'황준우' },
+    { rank:'사원', name:'얀린' }
   ],
   '자재관리부': [
-    { rank:'부장',  name:'전기훈' },
-    { rank:'대리',  name:'조우진' }
+    { rank:'부장', name:'전기훈' }, { rank:'대리', name:'조우진' }
   ],
   '품질보증부': [
-    { rank:'부장',  name:'유창근' },
-    { rank:'대리',  name:'신은혜' },
-    { rank:'차장',  name:'성명현' },
-    { rank:'과장',  name:'김기현' },
-    { rank:'과장',  name:'신중열' },
-    { rank:'반장',  name:'김민식' },
-    { rank:'주임',  name:'유민종' },
-    { rank:'주임',  name:'김기태' },
-    { rank:'주임',  name:'안광현' },
-    { rank:'사원',  name:'최현호' },
-    { rank:'사원',  name:'박종석' }
+    { rank:'부장', name:'유창근' }, { rank:'대리', name:'신은혜' },
+    { rank:'차장', name:'성명현' }, { rank:'과장', name:'김기현' },
+    { rank:'과장', name:'신중열' }, { rank:'반장', name:'김민식' },
+    { rank:'주임', name:'유민종' }, { rank:'주임', name:'김기태' },
+    { rank:'주임', name:'안광현' }, { rank:'사원', name:'최현호' },
+    { rank:'사원', name:'박종석' }
   ],
   '고객지원부': [
-    { rank:'전무',  name:'이종덕' },
-    { rank:'이사',  name:'이병수' },
-    { rank:'반장',  name:'이연호' },
-    { rank:'팀장',  name:'정영교' },
-    { rank:'팀장',  name:'최인태' },
-    { rank:'차장',  name:'강명광' },
-    { rank:'과장',  name:'박준형' },
-    { rank:'주임',  name:'이민혁' }
+    { rank:'전무', name:'이종덕' }, { rank:'이사', name:'이병수' },
+    { rank:'반장', name:'이연호' }, { rank:'팀장', name:'정영교' },
+    { rank:'팀장', name:'최인태' }, { rank:'차장', name:'강명광' },
+    { rank:'과장', name:'박준형' }, { rank:'주임', name:'이민혁' }
   ],
   '신재생에너지사업부': [
-    { rank:'상무',  name:'최재웅' },
-    { rank:'부장',  name:'송지훈' },
-    { rank:'팀장',  name:'김수안' },
-    { rank:'과장',  name:'홍기홍' },
-    { rank:'주임',  name:'김은지' }
+    { rank:'상무', name:'최재웅' }, { rank:'부장', name:'송지훈' },
+    { rank:'팀장', name:'김수안' }, { rank:'과장', name:'홍기홍' },
+    { rank:'주임', name:'김은지' }
   ],
   '부설연구소': [
-    { rank:'전무',  name:'이석원' },
-    { rank:'상무',  name:'홍두영' },
-    { rank:'부장',  name:'정택기' },
-    { rank:'부장',  name:'조민웅' },
-    { rank:'부장',  name:'김충기' },
-    { rank:'대리',  name:'최재호' },
-    { rank:'주임',  name:'권재응' },
-    { rank:'주임',  name:'김지영' }
+    { rank:'전무', name:'이석원' }, { rank:'상무', name:'홍두영' },
+    { rank:'부장', name:'정택기' }, { rank:'부장', name:'조민웅' },
+    { rank:'부장', name:'김충기' }, { rank:'대리', name:'최재호' },
+    { rank:'주임', name:'권재응' }, { rank:'주임', name:'김지영' }
   ],
   '경영지원부': [
-    { rank:'부사장', name:'조규오' },
-    { rank:'상무',  name:'김소윤' },
-    { rank:'부장',  name:'강유석' },
-    { rank:'주임',  name:'김나래' },
-    { rank:'주임',  name:'이용석' },
-    { rank:'실장',  name:'김동민' },
-    { rank:'실장',  name:'우석' }
+    { rank:'부사장', name:'조규오' }, { rank:'상무', name:'김소윤' },
+    { rank:'부장', name:'강유석' }, { rank:'주임', name:'김나래' },
+    { rank:'주임', name:'이용석' }, { rank:'실장', name:'김동민' },
+    { rank:'실장', name:'우석' }
   ],
   '신사업부': [
-    { rank:'상무',  name:'김계수' },
-    { rank:'본부장', name:'이민규' },
-    { rank:'팀장',  name:'이승호' }
+    { rank:'상무', name:'김계수' }, { rank:'본부장', name:'이민규' },
+    { rank:'팀장', name:'이승호' }
   ],
   '임원': [
-    { rank:'사장', name:'김한수' },
-    { rank:'고문', name:'이길형' }
+    { rank:'사장', name:'김한수' }, { rank:'고문', name:'이길형' }
   ]
 };
 
-const STORAGE_KEY = 'hy_signatures_v2';
-const GS_KEY = 'hy_gs_url';
+const STORAGE_KEY = 'hy_signatures_v4';
 const ADMIN_PW = '123456';
 
+function isGsConfigured() { return GS_URL && GS_URL.startsWith('https://script.google.com/'); }
 function loadSigs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; } }
 function saveSigs(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
-function getGsUrl() { return localStorage.getItem(GS_KEY) || ''; }
-function setGsUrl(u) { localStorage.setItem(GS_KEY, u); }
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function makeKey(training, dept, name, dateKey) {
+  return `${training}__${dept}__${name}__${dateKey}`;
+}
 
-// ============ 상태 ============
-let step = 1;
-let selectedTraining = null;
-let selectedDept = null;
-let selectedEmp = null;
-let isAdmin = false;
-let adminFilter = 'all';
+let step = 1, selectedTraining = null, selectedDept = null, selectedEmp = null;
+let isAdmin = false, adminFilter = 'all';
+let lastSyncAt = 0, syncOk = false;
 
 function init() {
+  // GS_URL이 미설정이면 일반 사용자에겐 안내 화면, 관리자에겐 설정 화면을 보여줌
+  if (!isGsConfigured()) {
+    document.getElementById('blockedApp').style.display = '';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('setupGateInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') verifySetupGate();
+    });
+    return;
+  }
+  document.getElementById('app').style.display = '';
+
   const d = new Date();
   const days = ['일','월','화','수','목','금','토'];
   document.getElementById('dateLabel').textContent = `📅 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
@@ -406,17 +498,25 @@ function init() {
 
   document.getElementById('adminTrainingSelect').innerHTML =
     TRAININGS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  document.getElementById('adminDateSelect').value = todayKey();
 
   let total = 0; ORG_ORDER.forEach(d => total += ORG[d].length);
   document.getElementById('totalCount').textContent = total;
 
-  // password modal enter key
   document.getElementById('pwInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') verifyPw();
   });
 
   setupCanvas();
   updateUI();
+
+  // 시작 시 원격에서 기록 동기화 (로컬은 항상 깨끗하게 시트와 일치시킴)
+  if (isGsConfigured()) {
+    localStorage.removeItem(STORAGE_KEY);
+    pullRemote(true);
+  } else {
+    console.warn('GS_URL이 설정되지 않았습니다.');
+  }
 }
 
 function selectTraining(id) {
@@ -450,23 +550,36 @@ function onEmpChange() {
   document.getElementById('nextBtn').disabled = false;
 }
 
-function goNext() {
-  if (step === 1) { if (!selectedTraining) return; step = 2; }
+async function goNext() {
+  if (step === 1) {
+    if (!selectedTraining) return;
+    step = 2; updateUI();
+  }
   else if (step === 2) {
     if (!selectedEmp) return;
+    const btn = document.getElementById('nextBtn');
+    const origText = btn.textContent;
+    btn.disabled = true; btn.textContent = '확인 중...';
+    if (isGsConfigured()) {
+      try { await pullRemote(false); } catch(e) {}
+    }
+    btn.disabled = false; btn.textContent = origText;
+
     const sigs = loadSigs();
-    const key = `${selectedTraining}__${selectedEmp.dept}__${selectedEmp.name}`;
+    const dateKey = todayKey();
+    const key = makeKey(selectedTraining, selectedEmp.dept, selectedEmp.name, dateKey);
     if (sigs[key]) {
       const t = TRAININGS.find(x => x.id === selectedTraining);
       document.getElementById('dupBody').innerHTML =
-        `[${t.name}]<br><b>${selectedEmp.rank} ${selectedEmp.name}</b>님은 이미 서명을<br>완료하셨습니다.`;
+        `[${t.name}]<br><b>${selectedEmp.rank} ${selectedEmp.name}</b>님은 <b>오늘</b> 이미 서명을 완료하셨습니다.` +
+        (sigs[key].atStr ? `<br><span style="color:#888; font-size:12px;">(${sigs[key].atStr})</span>` : '') +
+        `<br><span style="color:#1f6b3a; font-size:12px; margin-top:6px; display:inline-block;">📅 내일 다시 서명하실 수 있습니다.</span>`;
       document.getElementById('dupModal').classList.add('show');
       return;
     }
-    step = 3;
+    step = 3; updateUI();
   }
-  else if (step === 3) { submitSig(); return; }
-  updateUI();
+  else if (step === 3) { submitSig(); }
 }
 
 function goBack() { if (step > 1) { step--; updateUI(); } }
@@ -535,38 +648,48 @@ function clearSig() {
   if (step === 3) document.getElementById('nextBtn').disabled = true;
 }
 
-function submitSig() {
+async function submitSig() {
   if (!hasDrawn) return;
+  if (!isGsConfigured()) {
+    document.getElementById('setupModal').classList.add('show');
+    return;
+  }
+  const btn = document.getElementById('nextBtn');
+  btn.disabled = true; btn.textContent = '제출 중...';
+
   const c = document.getElementById('sig');
   const dataURL = c.toDataURL('image/png');
   const sigs = loadSigs();
-  const key = `${selectedTraining}__${selectedEmp.dept}__${selectedEmp.name}`;
+  const dateKey = todayKey();
+  const key = makeKey(selectedTraining, selectedEmp.dept, selectedEmp.name, dateKey);
   const now = new Date();
   const t = TRAININGS.find(x => x.id === selectedTraining);
   const record = {
-    training: selectedTraining,
-    trainingName: t.name,
-    dept: selectedEmp.dept,
-    rank: selectedEmp.rank,
-    name: selectedEmp.name,
-    img: dataURL,
-    at: now.toISOString(),
-    atStr: now.toLocaleString('ko-KR'),
-    synced: false
+    training: selectedTraining, trainingName: t.name,
+    dept: selectedEmp.dept, rank: selectedEmp.rank, name: selectedEmp.name,
+    img: dataURL, at: now.toISOString(), atStr: now.toLocaleString('ko-KR'),
+    atDate: dateKey
   };
-  sigs[key] = record;
-  saveSigs(sigs);
 
-  // Google Sheets 전송
-  pushToSheet(record).then(() => {
-    const cur = loadSigs();
-    if (cur[key]) { cur[key].synced = true; saveSigs(cur); }
-  }).catch(() => {});
-
-  document.getElementById('okBody').innerHTML =
-    `[${t.name}]<br><b>${selectedEmp.rank} ${selectedEmp.name}</b>님의 서명이<br>저장되었습니다.` +
-    (getGsUrl() ? '<br><span style="color:#1a73e8; font-size:12px;">📊 Google Sheets로 전송됨</span>' : '');
-  document.getElementById('okModal').classList.add('show');
+  try {
+    await pushToSheet(record);
+    record.synced = true;
+    sigs[key] = record; saveSigs(sigs);
+    document.getElementById('okBody').innerHTML =
+      `[${t.name}]<br><b>${selectedEmp.rank} ${selectedEmp.name}</b>님의 서명이<br>Google Sheets에 안전하게 저장되었습니다.`;
+    document.getElementById('okModal').classList.add('show');
+  } catch (e) {
+    if (e.code === 'duplicate') {
+      document.getElementById('dupBody').innerHTML =
+        `[${t.name}]<br><b>${selectedEmp.rank} ${selectedEmp.name}</b>님은 <b>오늘</b> 이미 서명을 완료하셨습니다.` +
+        `<br><span style="color:#1f6b3a; font-size:12px; margin-top:6px; display:inline-block;">📅 내일 다시 서명하실 수 있습니다.</span>`;
+      document.getElementById('dupModal').classList.add('show');
+      btn.disabled = false; btn.textContent = '제출하기';
+    } else {
+      alert('서명 저장에 실패했습니다.\n네트워크를 확인하고 다시 시도해 주세요.\n\n' + (e.message || ''));
+      btn.disabled = false; btn.textContent = '제출하기';
+    }
+  }
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
@@ -579,73 +702,91 @@ function resetFlow() {
   clearSig(); updateUI();
 }
 
-// ============ Google Sheets 전송 ============
+// ============ Google Sheets 통신 ============
 async function pushToSheet(record) {
-  const url = getGsUrl();
-  if (!url) return Promise.resolve();
+  const res = await fetch(GS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      atStr: record.atStr, atDate: record.atDate,
+      trainingName: record.trainingName,
+      dept: record.dept, rank: record.rank, name: record.name,
+      img: record.img, userAgent: navigator.userAgent
+    })
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!data.ok) {
+    const err = new Error(data.message || data.error || '저장 실패');
+    err.code = data.error;
+    throw err;
+  }
+  return data;
+}
+
+async function pullRemote(showBanner) {
+  if (!isGsConfigured()) { updateConnUI(false, 'URL 미설정'); return; }
+  if (showBanner) document.getElementById('syncBanner').style.display = 'block';
   try {
-    await fetch(url, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        atStr: record.atStr,
-        trainingName: record.trainingName,
-        dept: record.dept,
-        rank: record.rank,
-        name: record.name,
-        img: record.img,
-        userAgent: navigator.userAgent
-      })
+    const res = await fetch(GS_URL + '?action=list', { method: 'GET' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '응답 오류');
+
+    const local = loadSigs();
+    let merged = 0;
+    (data.records || []).forEach(r => {
+      const tid = NAME_TO_ID[r.trainingName] || r.training;
+      if (!tid || !r.atDate) return;
+      const key = makeKey(tid, r.dept, r.name, r.atDate);
+      if (!local[key]) {
+        local[key] = {
+          training: tid, trainingName: r.trainingName,
+          dept: r.dept, rank: r.rank, name: r.name,
+          atStr: r.atStr, atDate: r.atDate,
+          synced: true, remote: true, img: ''
+        };
+        merged++;
+      }
     });
-    return true;
-  } catch (e) { console.warn('GS push failed', e); throw e; }
-}
-
-function saveGsUrl() {
-  const v = document.getElementById('gsUrlInput').value.trim();
-  if (v && !v.startsWith('https://script.google.com/')) {
-    alert('Apps Script 웹앱 URL이 올바르지 않습니다.\nhttps://script.google.com/... 으로 시작해야 합니다.');
-    return;
+    saveSigs(local);
+    lastSyncAt = Date.now();
+    syncOk = true;
+    updateConnUI(true, `연결됨 · 시트 ${(data.records || []).length}건`);
+    if (isAdmin) renderAdmin();
+    return merged;
+  } catch (e) {
+    console.warn('pull failed', e);
+    syncOk = false;
+    updateConnUI(false, '연결 실패');
+    throw e;
+  } finally {
+    document.getElementById('syncBanner').style.display = 'none';
   }
-  setGsUrl(v);
-  updateGsCard();
-  alert(v ? 'Google Sheets URL이 저장되었습니다.' : 'URL이 삭제되었습니다.');
 }
 
-function updateGsCard() {
-  const url = getGsUrl();
-  const card = document.getElementById('gsSetup');
-  document.getElementById('gsUrlInput').value = url;
-  if (url) {
+function updateConnUI(ok, msg) {
+  const card = document.getElementById('connCard');
+  if (!card) return;
+  card.classList.remove('ok','bad','warn');
+  if (!isGsConfigured()) {
+    card.classList.add('warn');
+    document.getElementById('connTitle').textContent = '⚠ GS_URL 미설정';
+    document.getElementById('connSub').textContent = 'index.html의 GS_URL 값을 수정 후 GitHub에 재업로드 필요';
+  } else if (ok) {
     card.classList.add('ok');
-    card.querySelector('b').textContent = '📊 Google Sheets 연동 활성';
+    document.getElementById('connTitle').textContent = '📡 Google Sheets 연결됨';
+    document.getElementById('connSub').textContent = msg + (lastSyncAt ? ' · ' + new Date(lastSyncAt).toLocaleTimeString('ko-KR') : '');
   } else {
-    card.classList.remove('ok');
-    card.querySelector('b').textContent = '📊 Google Sheets 연동';
+    card.classList.add('bad');
+    document.getElementById('connTitle').textContent = '✕ Google Sheets 연결 실패';
+    document.getElementById('connSub').textContent = msg;
   }
 }
 
-async function syncAll() {
-  if (!getGsUrl()) { alert('먼저 Google Sheets URL을 입력해 주세요.'); return; }
-  const sigs = loadSigs();
-  const pending = Object.entries(sigs).filter(([k, v]) => !v.synced);
-  if (pending.length === 0) { alert('동기화할 신규 서명이 없습니다.'); return; }
-  if (!confirm(`미동기화 서명 ${pending.length}건을 전송하시겠습니까?`)) return;
-  let ok = 0;
-  for (const [k, v] of pending) {
-    try { await pushToSheet(v); sigs[k].synced = true; ok++; } catch(e) {}
-  }
-  saveSigs(sigs);
-  renderAdmin();
-  alert(`${ok}건 동기화 완료 (실패 ${pending.length - ok}건)`);
-}
-
-function openSheet() {
-  const url = getGsUrl();
-  if (!url) { alert('Google Sheets URL이 설정되지 않았습니다.'); return; }
-  // Apps Script URL에서 스프레드시트 ID를 추출할 수 없으므로 안내
-  alert('Apps Script 웹앱은 스프레드시트로 직접 연결되지 않습니다.\n구글 드라이브에서 연결된 스프레드시트를 열어 확인해 주세요.');
+async function reloadRemote() {
+  try { await pullRemote(true); }
+  catch(e) { alert('동기화 실패: ' + (e.message || e)); }
 }
 
 // ============ 관리자 ============
@@ -657,10 +798,8 @@ function requestAdmin() {
 }
 function verifyPw() {
   const v = document.getElementById('pwInput').value;
-  if (v === ADMIN_PW) {
-    closeModal('pwModal');
-    toggleAdmin(true);
-  } else {
+  if (v === ADMIN_PW) { closeModal('pwModal'); toggleAdmin(true); }
+  else {
     document.getElementById('pwInput').value = '';
     document.getElementById('pwInput').style.borderColor = '#c62828';
     setTimeout(() => { document.getElementById('pwInput').style.borderColor = ''; }, 800);
@@ -672,7 +811,11 @@ function toggleAdmin(on) {
   document.getElementById('userView').style.display = isAdmin ? 'none' : '';
   document.getElementById('adminView').style.display = isAdmin ? '' : 'none';
   document.getElementById('modeSwitch').textContent = isAdmin ? '서명모드' : '관리자';
-  if (isAdmin) { updateGsCard(); renderAdmin(); }
+  if (isAdmin) {
+    updateConnUI(syncOk, syncOk ? '연결됨' : '연결 확인 중');
+    renderAdmin();
+    if (isGsConfigured() && Date.now() - lastSyncAt > 30000) pullRemote(true);
+  }
 }
 
 function setFilter(f) {
@@ -680,11 +823,12 @@ function setFilter(f) {
   document.querySelectorAll('.admin-tab').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
   renderAdmin();
 }
-
 function getCurrentTraining() { return document.getElementById('adminTrainingSelect').value; }
+function getCurrentDate() { return document.getElementById('adminDateSelect').value || todayKey(); }
 
 function renderAdmin() {
   const tid = getCurrentTraining();
+  const dateKey = getCurrentDate();
   const sigs = loadSigs();
   const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
 
@@ -692,7 +836,7 @@ function renderAdmin() {
   ORG_ORDER.forEach(dept => {
     ORG[dept].forEach(p => {
       total++;
-      if (sigs[`${tid}__${dept}__${p.name}`]) signed++;
+      if (sigs[makeKey(tid, dept, p.name, dateKey)]) signed++;
     });
   });
   document.getElementById('signedNum').textContent = signed;
@@ -703,7 +847,7 @@ function renderAdmin() {
   ORG_ORDER.forEach(dept => {
     const arr = ORG[dept];
     const rows = arr.map(p => {
-      const sig = sigs[`${tid}__${dept}__${p.name}`];
+      const sig = sigs[makeKey(tid, dept, p.name, dateKey)];
       return { ...p, dept, sig };
     }).filter(r => {
       if (adminFilter === 'signed' && !r.sig) return false;
@@ -712,7 +856,7 @@ function renderAdmin() {
       return true;
     });
     if (rows.length === 0) return;
-    const deptSigned = arr.filter(p => sigs[`${tid}__${dept}__${p.name}`]).length;
+    const deptSigned = arr.filter(p => sigs[makeKey(tid, dept, p.name, dateKey)]).length;
     html += `<div class="dept-block open">
       <div class="dept-head" onclick="this.parentElement.classList.toggle('open')">
         <span>${dept}</span>
@@ -726,8 +870,7 @@ function renderAdmin() {
               ${r.sig ? `<div class="meta">${r.sig.atStr}</div>` : ''}
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-              ${r.sig ? `<img class="sig-thumb" src="${r.sig.img}" alt="서명">` : ''}
-              ${r.sig ? (r.sig.synced ? '<span class="badge-sync">SYNC</span>' : '<span class="badge-pending">대기</span>') : ''}
+              ${r.sig && r.sig.img ? `<img class="sig-thumb" src="${r.sig.img}" alt="서명">` : ''}
               ${r.sig ? '<span class="badge-ok">완료</span>' : '<span class="badge-no">미서명</span>'}
             </div>
           </div>
@@ -741,46 +884,81 @@ function renderAdmin() {
 
 function exportCSV() {
   const tid = getCurrentTraining();
+  const dateKey = getCurrentDate();
   const t = TRAININGS.find(x => x.id === tid);
   const sigs = loadSigs();
-  let csv = '﻿교육명,부서,직급,이름,서명일시,서명여부,동기화\n';
+  let csv = '﻿교육명,조회날짜,부서,직급,이름,서명일시,서명여부\n';
   ORG_ORDER.forEach(dept => {
     ORG[dept].forEach(p => {
-      const s = sigs[`${tid}__${dept}__${p.name}`];
-      csv += `"${t.name}","${dept}","${p.rank}","${p.name}","${s ? s.atStr : ''}","${s ? '완료' : '미서명'}","${s ? (s.synced ? 'Y' : 'N') : ''}"\n`;
+      const s = sigs[makeKey(tid, dept, p.name, dateKey)];
+      csv += `"${t.name}","${dateKey}","${dept}","${p.rank}","${p.name}","${s ? s.atStr : ''}","${s ? '완료' : '미서명'}"\n`;
     });
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const today = new Date().toISOString().slice(0,10);
-  a.href = url; a.download = `한양전공_${t.name}_서명현황_${today}.csv`;
+  a.href = url; a.download = `한양전공_${t.name}_서명현황_${dateKey}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
 
 function copyUnsigned() {
   const tid = getCurrentTraining();
+  const dateKey = getCurrentDate();
   const sigs = loadSigs();
   const lines = [];
   ORG_ORDER.forEach(dept => {
     ORG[dept].forEach(p => {
-      if (!sigs[`${tid}__${dept}__${p.name}`]) lines.push(`${dept} ${p.rank} ${p.name}`);
+      if (!sigs[makeKey(tid, dept, p.name, dateKey)]) lines.push(`${dept} ${p.rank} ${p.name}`);
     });
   });
-  if (!lines.length) { alert('미서명자가 없습니다.'); return; }
+  if (!lines.length) { alert(`${dateKey} 기준 미서명자가 없습니다.`); return; }
   const text = lines.join('\n');
-  navigator.clipboard.writeText(text).then(() => alert(`미서명자 ${lines.length}명 명단이 클립보드에 복사되었습니다.\n\n` + text.split('\n').slice(0,5).join('\n') + (lines.length > 5 ? '\n...' : '')));
+  navigator.clipboard.writeText(text).then(() => alert(`[${dateKey}] 미서명자 ${lines.length}명 명단이 클립보드에 복사되었습니다.\n\n` + text.split('\n').slice(0,5).join('\n') + (lines.length > 5 ? '\n...' : '')));
 }
 
-function resetCurrent() {
-  const tid = getCurrentTraining();
-  const t = TRAININGS.find(x => x.id === tid);
-  if (!confirm(`[${t.name}]\n해당 교육의 모든 서명 기록을 삭제할까요?\n(다른 교육 기록은 유지됩니다)\n※ 시트 데이터는 삭제되지 않습니다.`)) return;
-  const sigs = loadSigs();
-  Object.keys(sigs).forEach(k => { if (k.startsWith(tid + '__')) delete sigs[k]; });
-  saveSigs(sigs);
-  renderAdmin();
+// ============ 최초 설정 화면 ============
+function showSetupGate() {
+  document.getElementById('setupGateInput').value = '';
+  document.getElementById('setupGateModal').classList.add('show');
+  setTimeout(() => document.getElementById('setupGateInput').focus(), 100);
+}
+function verifySetupGate() {
+  const v = document.getElementById('setupGateInput').value;
+  if (v === ADMIN_PW) {
+    closeModal('setupGateModal');
+    document.getElementById('blockedApp').style.display = 'none';
+    document.getElementById('setupApp').style.display = '';
+  } else {
+    const inp = document.getElementById('setupGateInput');
+    inp.value = '';
+    inp.style.borderColor = '#c62828';
+    setTimeout(() => { inp.style.borderColor = ''; }, 800);
+  }
+}
+function generateShareUrl() {
+  const url = document.getElementById('setupUrlInput').value.trim();
+  if (!url.startsWith('https://script.google.com/') || !url.endsWith('/exec')) {
+    alert('Apps Script 웹앱 URL 형식이 올바르지 않습니다.\n\n다음과 같은 형태여야 합니다:\nhttps://script.google.com/macros/s/.../exec');
+    return;
+  }
+  const baseUrl = location.origin + location.pathname.replace(/[^/]*$/, '');
+  const shareUrl = baseUrl + '?gs=' + encodeURIComponent(url);
+  document.getElementById('shareUrlText').textContent = shareUrl;
+  document.getElementById('setupResult').style.display = '';
+  document.getElementById('setupResult').scrollIntoView({ behavior: 'smooth' });
+}
+function copyShareUrl() {
+  const text = document.getElementById('shareUrlText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ 복사되었습니다';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+function goToShareUrl() {
+  location.href = document.getElementById('shareUrlText').textContent;
 }
 
 window.addEventListener('DOMContentLoaded', init);
