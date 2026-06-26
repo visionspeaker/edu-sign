@@ -241,7 +241,7 @@
     </div>
 
     <div id="step2" style="display:none;">
-      <div class="step-title">본인 정보를<br>입력해 주세요</div>
+      <div class="step-title">본인 정보를<br>선택해 주세요</div>
       <div class="field">
         <div class="field-icon">📋</div>
         <div class="field-body">
@@ -250,33 +250,14 @@
         </div>
       </div>
       <div style="padding: 0 16px;">
-        <select id="deptSelect" onchange="onInputChange()">
+        <select id="deptSelect" onchange="onDeptChange()">
           <option value="">— 부서를 선택해 주세요 —</option>
         </select>
       </div>
       <div style="padding: 12px 16px 0;">
-        <select id="rankSelect" onchange="onInputChange()">
-          <option value="">— 직급을 선택해 주세요 —</option>
-          <option value="사장">사장</option>
-          <option value="부사장">부사장</option>
-          <option value="전무">전무</option>
-          <option value="상무">상무</option>
-          <option value="이사">이사</option>
-          <option value="고문">고문</option>
-          <option value="본부장">본부장</option>
-          <option value="실장">실장</option>
-          <option value="부장">부장</option>
-          <option value="차장">차장</option>
-          <option value="과장">과장</option>
-          <option value="대리">대리</option>
-          <option value="팀장">팀장</option>
-          <option value="반장">반장</option>
-          <option value="주임">주임</option>
-          <option value="사원">사원</option>
+        <select id="empSelect" onchange="onEmpChange()" disabled>
+          <option value="">— 이름을 선택해 주세요 —</option>
         </select>
-      </div>
-      <div style="padding: 12px 16px 0;">
-        <input type="text" id="nameInput" placeholder="이름을 입력해 주세요" oninput="onInputChange()" autocomplete="off">
       </div>
     </div>
 
@@ -511,7 +492,7 @@ function init() {
   const dept = document.getElementById('deptSelect');
   ORG_ORDER.forEach(d => {
     const opt = document.createElement('option');
-    opt.value = d; opt.textContent = `${d} (${ORG[d].length}명)`;
+    opt.value = d; opt.textContent = d;
     dept.appendChild(opt);
   });
 
@@ -544,18 +525,29 @@ function selectTraining(id) {
   document.getElementById('nextBtn').disabled = false;
 }
 
-function onInputChange() {
-  const dept = document.getElementById('deptSelect').value;
-  const rank = document.getElementById('rankSelect').value;
-  const name = document.getElementById('nameInput').value.trim();
-  selectedDept = dept || null;
-  if (dept && rank && name) {
-    selectedEmp = { dept, rank, name };
-    document.getElementById('nextBtn').disabled = false;
-  } else {
-    selectedEmp = null;
-    document.getElementById('nextBtn').disabled = true;
-  }
+function onDeptChange() {
+  selectedDept = document.getElementById('deptSelect').value;
+  const emp = document.getElementById('empSelect');
+  emp.innerHTML = '<option value="">— 이름을 선택해 주세요 —</option>';
+  if (selectedDept) {
+    ORG[selectedDept].forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = `${selectedDept}|${p.rank}|${p.name}`;
+      opt.textContent = `${p.rank} ${p.name}`;
+      emp.appendChild(opt);
+    });
+    emp.disabled = false;
+  } else { emp.disabled = true; }
+  selectedEmp = null;
+  document.getElementById('nextBtn').disabled = true;
+}
+
+function onEmpChange() {
+  const v = document.getElementById('empSelect').value;
+  if (!v) { selectedEmp = null; document.getElementById('nextBtn').disabled = true; return; }
+  const [dept, rank, name] = v.split('|');
+  selectedEmp = { dept, rank, name };
+  document.getElementById('nextBtn').disabled = false;
 }
 
 async function goNext() {
@@ -705,8 +697,8 @@ function resetFlow() {
   step = 1; selectedTraining = null; selectedDept = null; selectedEmp = null;
   document.querySelectorAll('.training-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('deptSelect').value = '';
-  document.getElementById('rankSelect').value = '';
-  document.getElementById('nameInput').value = '';
+  document.getElementById('empSelect').innerHTML = '<option value="">— 이름을 선택해 주세요 —</option>';
+  document.getElementById('empSelect').disabled = true;
   clearSig(); updateUI();
 }
 
