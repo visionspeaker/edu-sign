@@ -209,7 +209,7 @@
     <div class="modal-icon lock">🔒</div>
     <div class="modal-title">관리자 인증</div>
     <div class="modal-body">시스템 최초 설정은 관리자만 가능합니다.<br>비밀번호를 입력해 주세요.</div>
-    <input type="password" id="setupGateInput" maxlength="6" inputmode="numeric" placeholder="••••••" autocomplete="off">
+    <input type="password" id="setupGateInput" maxlength="20" placeholder="••••••••" autocomplete="off">
     <button class="modal-btn" onclick="verifySetupGate()">확인</button>
     <button class="modal-btn ghost" onclick="closeModal('setupGateModal')">취소</button>
   </div>
@@ -348,7 +348,7 @@
       <div class="modal-icon lock">🔒</div>
       <div class="modal-title">관리자 인증</div>
       <div class="modal-body">비밀번호를 입력해 주세요</div>
-      <input type="password" id="pwInput" maxlength="6" inputmode="numeric" placeholder="••••••" autocomplete="off">
+      <input type="password" id="pwInput" maxlength="20" placeholder="••••••••" autocomplete="off">
       <button class="modal-btn" onclick="verifyPw()">확인</button>
       <button class="modal-btn ghost" onclick="closeModal('pwModal')">취소</button>
     </div>
@@ -464,7 +464,7 @@ const ORG = {
 };
 
 const STORAGE_KEY = 'hy_signatures_v4';
-const ADMIN_PW = '123456';
+const ADMIN_PW = 'hyele0927!';
 
 function isGsConfigured() { return GS_URL && GS_URL.startsWith('https://script.google.com/'); }
 function loadSigs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; } }
