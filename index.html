@@ -304,7 +304,7 @@
   <div id="adminView" style="display:none;">
     <div class="admin-view">
       <div class="admin-title">서명 현황 관리</div>
-      <div class="admin-sub">한양전공(주) · 총 인원 <span id="totalCount">71</span>명</div>
+      <div class="admin-sub">한양전공(주) · 서명 기록</div>
 
       <div class="conn-card" id="connCard">
         <div><b id="connTitle">📡 연동 확인 중...</b><div id="connSub" style="font-size:12px; margin-top:2px;"></div></div>
@@ -318,23 +318,16 @@
         <input type="date" class="search-box" id="adminDateSelect" onchange="renderAdmin()" style="flex:1; margin-bottom:0;">
       </div>
 
-      <div class="stat-grid">
-        <div class="stat-card"><div class="stat-num" id="signedNum">0</div><div class="stat-lbl">서명 완료</div></div>
-        <div class="stat-card"><div class="stat-num" id="unsignedNum">0</div><div class="stat-lbl">미서명</div></div>
-        <div class="stat-card"><div class="stat-num" id="ratePct">0%</div><div class="stat-lbl">참여율</div></div>
+      <div class="stat-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="stat-card"><div class="stat-num" id="signedNum">0</div><div class="stat-lbl">서명 완료 (명)</div></div>
+        <div class="stat-card"><div class="stat-num" id="deptNum">0</div><div class="stat-lbl">참여 부서 (곳)</div></div>
       </div>
 
-      <div class="admin-tabs">
-        <button class="admin-tab active" data-filter="all" onclick="setFilter('all')">전체</button>
-        <button class="admin-tab" data-filter="signed" onclick="setFilter('signed')">서명완료</button>
-        <button class="admin-tab" data-filter="unsigned" onclick="setFilter('unsigned')">미서명</button>
-      </div>
-
-      <input type="text" class="search-box" id="searchInput" placeholder="이름 또는 부서 검색" oninput="renderAdmin()">
+      <input type="text" class="search-box" id="searchInput" placeholder="이름 · 직급 · 부서 검색" oninput="renderAdmin()">
 
       <div class="toolbar">
         <button onclick="exportCSV()">📥 CSV 내보내기</button>
-        <button onclick="copyUnsigned()">📋 미서명자 복사</button>
+        <button onclick="copySigned()">📋 명단 복사</button>
         <button onclick="lockAdmin()">🔒 잠금</button>
       </div>
 
@@ -518,9 +511,6 @@ function init() {
   document.getElementById('adminTrainingSelect').innerHTML =
     TRAININGS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
   document.getElementById('adminDateSelect').value = todayKey();
-
-  let total = 0; ORG_ORDER.forEach(d => total += ORG[d].length);
-  document.getElementById('totalCount').textContent = total;
 
   document.getElementById('pwInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') verifyPw();
@@ -895,34 +885,35 @@ function exportCSV() {
   const dateKey = getCurrentDate();
   const t = TRAININGS.find(x => x.id === tid);
   const sigs = loadSigs();
-  let csv = '﻿교육명,조회날짜,부서,직급,이름,서명일시,서명여부\n';
-  ORG_ORDER.forEach(dept => {
-    ORG[dept].forEach(p => {
-      const s = sigs[makeKey(tid, dept, p.name, dateKey)];
-      csv += `"${t.name}","${dateKey}","${dept}","${p.rank}","${p.name}","${s ? s.atStr : ''}","${s ? '완료' : '미서명'}"\n`;
-    });
+  let csv = '﻿교육명,날짜,일시,부서,직급,이름\n';
+  const signed = Object.values(sigs).filter(s =>
+    s.training === tid && s.atDate === dateKey
+  ).sort((a, b) => (a.atStr || '').localeCompare(b.atStr || ''));
+  signed.forEach(s => {
+    csv += `"${t.name}","${dateKey}","${s.atStr || ''}","${s.dept || ''}","${s.rank || ''}","${s.name || ''}"\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `한양전공_${t.name}_서명현황_${dateKey}.csv`;
+  a.href = url; a.download = `한양전공_${t.name}_서명목록_${dateKey}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
 
-function copyUnsigned() {
+function copySigned() {
   const tid = getCurrentTraining();
   const dateKey = getCurrentDate();
   const sigs = loadSigs();
-  const lines = [];
-  ORG_ORDER.forEach(dept => {
-    ORG[dept].forEach(p => {
-      if (!sigs[makeKey(tid, dept, p.name, dateKey)]) lines.push(`${dept} ${p.rank} ${p.name}`);
-    });
+  const signed = Object.values(sigs).filter(s =>
+    s.training === tid && s.atDate === dateKey
+  ).sort((a, b) => {
+    const d = (a.dept || '').localeCompare(b.dept || '');
+    return d !== 0 ? d : (a.atStr || '').localeCompare(b.atStr || '');
   });
-  if (!lines.length) { alert(`${dateKey} 기준 미서명자가 없습니다.`); return; }
+  if (!signed.length) { alert(`${dateKey} 기준 서명자가 없습니다.`); return; }
+  const lines = signed.map(s => `${s.dept} ${s.rank} ${s.name}`);
   const text = lines.join('\n');
-  navigator.clipboard.writeText(text).then(() => alert(`[${dateKey}] 미서명자 ${lines.length}명 명단이 클립보드에 복사되었습니다.\n\n` + text.split('\n').slice(0,5).join('\n') + (lines.length > 5 ? '\n...' : '')));
+  navigator.clipboard.writeText(text).then(() => alert(`[${dateKey}] 서명자 ${lines.length}명 명단이 클립보드에 복사되었습니다.\n\n` + text.split('\n').slice(0,5).join('\n') + (lines.length > 5 ? '\n...' : '')));
 }
 
 // ============ 최초 설정 화면 ============
