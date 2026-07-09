@@ -120,6 +120,10 @@
   .conn-card .right { display:flex; gap:6px; }
   .conn-card button { padding:6px 10px; border:1px solid currentColor; background:transparent; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; color:inherit; font-family:inherit; }
   .sync-banner { position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#1a73e8; color:#fff; padding:8px 16px; font-size:12px; text-align:center; z-index:999; display:none; }
+  .agreement-btn { flex:1; padding:16px 12px; border:2px solid #eef0f3; border-radius:12px; background:#fff; cursor:pointer; font-family:inherit; font-size:15px; font-weight:700; color:#333; transition:all .15s; }
+  .agreement-btn:active { transform:scale(.98); }
+  .agreement-btn.selected { background:#1f6b3a; color:#fff; border-color:#1f6b3a; }
+  .agreement-btn.disagree.selected { background:#c62828; border-color:#c62828; }
   /* Setup wizard */
   .setup-screen { padding: 32px 24px; min-height: 100vh; }
   .setup-screen h1 { font-size: 24px; color:#0a3a1e; margin-bottom: 6px; }
@@ -242,7 +246,7 @@
 
     <div id="step2" style="display:none;">
       <div class="step-title">본인 정보를<br>입력해 주세요</div>
-      <div class="field">
+      <div class="field" id="selectedTrainingCard">
         <div class="field-icon">📋</div>
         <div class="field-body">
           <div class="field-label">선택한 교육</div>
@@ -271,6 +275,13 @@
       </div>
       <div style="padding: 12px 16px 0;">
         <input type="text" id="nameInput" placeholder="이름을 입력해 주세요" oninput="onInputChange()" autocomplete="off">
+      </div>
+      <div id="agreementBlock" style="display:none; padding: 20px 16px 0;">
+        <div style="font-size:14px; font-weight:700; margin-bottom:10px; color:#0a3a1e;">✍️ 동의 여부</div>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="agreement-btn" data-agreement="agree" onclick="selectAgreement('agree')">✓ 동의함</button>
+          <button type="button" class="agreement-btn disagree" data-agreement="disagree" onclick="selectAgreement('disagree')">✗ 동의하지 않음</button>
+        </div>
       </div>
     </div>
 
@@ -466,6 +477,7 @@ function makeKey(training, dept, name, dateKey) {
 }
 
 let step = 1, selectedTraining = null, selectedDept = null, selectedEmp = null;
+let selectedAgreement = null;
 let isAdmin = false, adminFilter = 'all';
 let lastSyncAt = 0, syncOk = false;
 
@@ -534,13 +546,23 @@ function onInputChange() {
   const rank = document.getElementById('rankSelect').value;
   const name = document.getElementById('nameInput').value.trim();
   selectedDept = dept || null;
-  if (dept && rank && name) {
+  const needsAgreement = selectedTraining === 'agreement_v9';
+  const agreementOk = !needsAgreement || !!selectedAgreement;
+  if (dept && rank && name && agreementOk) {
     selectedEmp = { dept, rank, name };
     document.getElementById('nextBtn').disabled = false;
   } else {
     selectedEmp = null;
     document.getElementById('nextBtn').disabled = true;
   }
+}
+
+function selectAgreement(v) {
+  selectedAgreement = v;
+  document.querySelectorAll('.agreement-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.agreement === v);
+  });
+  onInputChange();
 }
 
 async function goNext() {
@@ -596,6 +618,9 @@ function updateUI() {
     if (selectedTraining) {
       const t = TRAININGS.find(x => x.id === selectedTraining);
       document.getElementById('selectedTrainingDisplay').textContent = t.name;
+      const isAgreement = selectedTraining === 'agreement_v9';
+      document.getElementById('selectedTrainingCard').style.display = isAgreement ? 'none' : '';
+      document.getElementById('agreementBlock').style.display = isAgreement ? '' : 'none';
     }
   }
   else if (step === 3) {
@@ -657,8 +682,12 @@ async function submitSig() {
   const key = makeKey(selectedTraining, selectedEmp.dept, selectedEmp.name, dateKey);
   const now = new Date();
   const t = TRAININGS.find(x => x.id === selectedTraining);
+  let trainingName = t.name;
+  if (selectedTraining === 'agreement_v9' && selectedAgreement) {
+    trainingName = `${t.name} (${selectedAgreement === 'agree' ? '동의함' : '동의하지 않음'})`;
+  }
   const record = {
-    training: selectedTraining, trainingName: t.name,
+    training: selectedTraining, trainingName,
     dept: selectedEmp.dept, rank: selectedEmp.rank, name: selectedEmp.name,
     img: dataURL, at: now.toISOString(), atStr: now.toLocaleString('ko-KR'),
     atDate: dateKey
@@ -688,7 +717,9 @@ async function submitSig() {
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function resetFlow() {
   step = 1; selectedTraining = null; selectedDept = null; selectedEmp = null;
+  selectedAgreement = null;
   document.querySelectorAll('.training-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.agreement-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('deptSelect').value = '';
   document.getElementById('rankSelect').value = '';
   document.getElementById('nameInput').value = '';
@@ -729,7 +760,8 @@ async function pullRemote(showBanner) {
     const local = loadSigs();
     let merged = 0;
     (data.records || []).forEach(r => {
-      const tid = NAME_TO_ID[r.trainingName] || r.training;
+      const baseName = (r.trainingName || '').replace(/\s*\([^)]*\)\s*$/, '');
+      const tid = NAME_TO_ID[baseName] || NAME_TO_ID[r.trainingName] || r.training;
       if (!tid || !r.atDate) return;
       const key = makeKey(tid, r.dept, r.name, r.atDate);
       if (!local[key]) {
