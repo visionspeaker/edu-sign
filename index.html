@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>한양전공(주) 법정의무교육 전자서명 시스템</title>
+<title>한양전공(주) 임직원 전자서명 시스템</title>
 
 <!--
   ============================================================================
@@ -226,7 +226,7 @@
     </div>
     <div class="title-area">
       <div class="logo-text">한양전공(주)</div>
-      <div class="subtitle">법정의무교육 전자서명 시스템</div>
+      <div class="subtitle">임직원 전자서명 시스템</div>
     </div>
     <div class="progress-bar">
       <div class="progress-seg active" id="p1"></div>
@@ -236,7 +236,7 @@
     <div class="step-label" id="stepLabel">1 of 3 단계</div>
 
     <div id="step1">
-      <div class="step-title">어떤 교육을<br>서명하시겠어요?</div>
+      <div class="step-title">메뉴를 선택하시고,<br>서명 해 주세요.</div>
       <div class="training-list" id="trainingList"></div>
     </div>
 
@@ -257,22 +257,16 @@
       <div style="padding: 12px 16px 0;">
         <select id="rankSelect" onchange="onInputChange()">
           <option value="">— 직급을 선택해 주세요 —</option>
-          <option value="사장">사장</option>
-          <option value="부사장">부사장</option>
-          <option value="전무">전무</option>
-          <option value="상무">상무</option>
-          <option value="이사">이사</option>
-          <option value="고문">고문</option>
-          <option value="본부장">본부장</option>
-          <option value="실장">실장</option>
-          <option value="부장">부장</option>
-          <option value="차장">차장</option>
-          <option value="과장">과장</option>
-          <option value="대리">대리</option>
-          <option value="팀장">팀장</option>
-          <option value="반장">반장</option>
-          <option value="주임">주임</option>
           <option value="사원">사원</option>
+          <option value="주임">주임</option>
+          <option value="대리">대리</option>
+          <option value="반장">반장</option>
+          <option value="과장">과장</option>
+          <option value="실장">실장</option>
+          <option value="차장">차장</option>
+          <option value="팀장">팀장</option>
+          <option value="부장">부장</option>
+          <option value="임원">임원</option>
         </select>
       </div>
       <div style="padding: 12px 16px 0;">
@@ -384,7 +378,8 @@ const TRAININGS = [
   { id:'safety',     icon:'🦺', name:'안전보건교육',   desc:'정기 안전보건 교육 (산업안전보건법)' },
   { id:'mandatory',  icon:'📋', name:'법정의무교육',   desc:'개인정보보호·성희롱·괴롭힘·장애인 인식개선 등' },
   { id:'special',    icon:'⚠️', name:'특별교육',       desc:'유해·위험작업 종사자 별도 안전교육' },
-  { id:'adhoc',      icon:'💡', name:'수시교육',       desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' }
+  { id:'adhoc',      icon:'💡', name:'수시교육',       desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' },
+  { id:'agreement_v9',  icon:'📜', name:'취업규칙 9차 개정 동의',    desc:'동의서' }
 ];
 const NAME_TO_ID = {};
 TRAININGS.forEach(t => NAME_TO_ID[t.name] = t.id);
