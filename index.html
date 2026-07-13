@@ -413,6 +413,16 @@
       <div class="modal-icon ok" style="margin-left:auto; margin-right:auto;">🖨</div>
       <div class="modal-title" style="text-align:center;">인쇄 형식 선택</div>
       <div style="font-size:13px; color:#666; text-align:center; margin-bottom:20px;">서명등록부를 어떤 형식으로 출력할지 선택해 주세요.</div>
+      <label class="print-label">교육 선택</label>
+      <select id="printTraining" class="print-select">
+        <option value="__all__">전체 교육</option>
+      </select>
+      <label class="print-label">서명 기간</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="date" id="printDateFrom" class="print-select" style="flex:1;">
+        <span style="font-size:14px; color:#666; font-weight:700;">~</span>
+        <input type="date" id="printDateTo" class="print-select" style="flex:1;">
+      </div>
       <label class="print-label">표 열 수</label>
       <select id="printCols" class="print-select">
         <option value="1">1열</option>
@@ -1022,13 +1032,25 @@ function copySigned() {
 }
 
 // ============ 서명결과 출력 ============
-function openPrintSetup() { document.getElementById('printSetupModal').classList.add('show'); }
+function openPrintSetup() {
+  const sel = document.getElementById('printTraining');
+  const currentTid = getCurrentTraining();
+  sel.innerHTML = '<option value="__all__">전체 교육</option>' +
+    TRAININGS.map(t => '<option value="' + t.id + '"' + (t.id === currentTid ? ' selected' : '') + '>' + t.name + '</option>').join('');
+  const currentDate = getCurrentDate();
+  document.getElementById('printDateFrom').value = currentDate;
+  document.getElementById('printDateTo').value = currentDate;
+  document.getElementById('printSetupModal').classList.add('show');
+}
 
 function openPrintPreview() {
+  const trainingId = document.getElementById('printTraining').value;
+  const dateFrom = document.getElementById('printDateFrom').value;
+  const dateTo = document.getElementById('printDateTo').value;
   const cols = parseInt(document.getElementById('printCols').value, 10) || 2;
   const sort = document.getElementById('printSort').value;
   const rate = document.getElementById('printRate').value;
-  document.getElementById('printContent').innerHTML = buildPrintHTML(cols, sort, rate);
+  document.getElementById('printContent').innerHTML = buildPrintHTML(trainingId, dateFrom, dateTo, cols, sort, rate);
   closeModal('printSetupModal');
   document.getElementById('printPreview').style.display = 'block';
   window.scrollTo(0, 0);
@@ -1037,85 +1059,111 @@ function openPrintPreview() {
 function closePrintPreview() { document.getElementById('printPreview').style.display = 'none'; }
 function doPrint() { window.print(); }
 
-function buildPrintHTML(cols, sortMode, showRate) {
-  const tid = getCurrentTraining();
-  const dateKey = getCurrentDate();
-  const t = TRAININGS.find(x => x.id === tid);
+function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) {
+  const isAll = !trainingId || trainingId === "__all__";
+  const t = isAll ? null : TRAININGS.find(x => x.id === trainingId);
+  const df = dateFrom || "";
+  const dt = dateTo || df;
   const sigs = loadSigs();
-  let signed = Object.values(sigs).filter(s => s.training === tid && s.atDate === dateKey);
+  let signed = Object.values(sigs).filter(s => {
+    if (!isAll && s.training !== trainingId) return false;
+    if (df && (s.atDate || "") < df) return false;
+    if (dt && (s.atDate || "") > dt) return false;
+    return true;
+  });
 
-  if (sortMode === 'dept') {
+  if (sortMode === "dept") {
     signed.sort((a, b) => {
+      if (isAll) {
+        const tA = TRAININGS.findIndex(x => x.id === a.training);
+        const tB = TRAININGS.findIndex(x => x.id === b.training);
+        const cmpT = (tA === -1 ? 999 : tA) - (tB === -1 ? 999 : tB);
+        if (cmpT !== 0) return cmpT;
+      }
       const dA = ORG_ORDER.indexOf(a.dept); const dB = ORG_ORDER.indexOf(b.dept);
       const cmp = (dA === -1 ? 999 : dA) - (dB === -1 ? 999 : dB);
       if (cmp !== 0) return cmp;
-      return (a.atStr || '').localeCompare(b.atStr || '');
+      return (a.atStr || "").localeCompare(b.atStr || "");
     });
-  } else if (sortMode === 'name') {
-    signed.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  } else if (sortMode === "name") {
+    signed.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   } else {
-    signed.sort((a, b) => (a.atStr || '').localeCompare(b.atStr || ''));
+    signed.sort((a, b) => (a.atStr || "").localeCompare(b.atStr || ""));
   }
 
   const perCol = Math.ceil(signed.length / cols) || 1;
   const columns = [];
   for (let i = 0; i < cols; i++) columns.push(signed.slice(i * perCol, (i + 1) * perCol));
 
-  let html = `
-    <div class="p-meta">
-      <div>한양전공(주)</div>
-      <div>서명일: ${dateKey}</div>
-    </div>
-    <h1>${escapeHtml(t.name)} 서명등록부</h1>
-    <div class="p-sub">한양전공(주) · 전자서명 기록 자동 집계</div>
-  `;
+  const dateLabel = (df && dt && df !== dt) ? (df + " ~ " + dt) : (df || "전체 기간");
+  const titleLabel = isAll ? "전체" : t.name;
 
-  if (showRate === 'yes') {
+  let html = ""
+    + '<div class="p-meta">'
+    +   '<div>한양전공(주)</div>'
+    +   '<div>서명 기간: ' + dateLabel + '</div>'
+    + '</div>'
+    + '<h1>' + escapeHtml(titleLabel) + ' 서명등록부</h1>'
+    + '<div class="p-sub">한양전공(주) · 전자서명 기록 자동 집계</div>';
+
+  if (showRate === "yes") {
     const deptCount = new Set(signed.map(s => s.dept)).size;
-    html += `<div class="p-stats">총 서명 <b>${signed.length}</b>명 · <b>${deptCount}</b>개 부서</div>`;
+    const trainingCount = new Set(signed.map(s => s.training)).size;
+    html += '<div class="p-stats">총 서명 <b>' + signed.length + '</b>명 · <b>' + deptCount + '</b>개 부서' + (isAll ? (' · <b>' + trainingCount + '</b>개 교육') : '') + '</div>';
   }
 
   html += '<div class="print-tables">';
   let globalNum = 0;
   columns.forEach(colData => {
-    html += '<table class="print-table"><thead><tr><th style="width:36px;">번호</th><th style="width:60px;">부서</th><th>성명</th><th>서명</th></tr></thead><tbody>';
+    html += '<table class="print-table"><thead><tr>';
+    html += '<th style="width:32px;">번호</th>';
+    if (isAll) html += '<th style="width:70px;">교육</th>';
+    html += '<th style="width:56px;">부서</th><th>성명</th><th>서명</th>';
+    html += '</tr></thead><tbody>';
     const groups = [];
-    if (sortMode === 'dept') {
+    if (sortMode === "dept") {
       let cur = null;
       colData.forEach(r => {
-        if (!cur || cur.dept !== r.dept) { cur = { dept: r.dept, count: 0 }; groups.push(cur); }
+        const key = isAll ? (r.training + "|" + r.dept) : r.dept;
+        if (!cur || cur.key !== key) { cur = { key: key, dept: r.dept, count: 0 }; groups.push(cur); }
         cur.count++;
       });
     }
     let gIdx = 0, gCount = 0;
     colData.forEach((r, i) => {
       globalNum++;
+      const tRec = TRAININGS.find(x => x.id === r.training);
+      const tName = tRec ? tRec.name.replace("교육", "").replace(" 개정 동의", "").trim() : (r.trainingName || "");
       html += '<tr>';
-      html += `<td>${globalNum}</td>`;
-      if (sortMode === 'dept') {
+      html += '<td>' + globalNum + '</td>';
+      if (isAll) html += '<td style="font-size:10px;">' + escapeHtml(tName) + '</td>';
+      if (sortMode === "dept") {
         if (gCount === 0) {
-          html += `<td class="dept" rowspan="${groups[gIdx].count}">${escapeHtml(r.dept || '')}</td>`;
+          html += '<td class="dept" rowspan="' + groups[gIdx].count + '">' + escapeHtml(r.dept || "") + '</td>';
           gCount = groups[gIdx].count;
           gIdx++;
         }
         gCount--;
       } else {
-        html += `<td>${escapeHtml(r.dept || '')}</td>`;
+        html += '<td>' + escapeHtml(r.dept || "") + '</td>';
       }
-      html += `<td>${escapeHtml((r.rank || '') + ' ' + (r.name || ''))}</td>`;
-      html += `<td class="sig">${r.img ? `<img src="${r.img}" alt="서명">` : '<span class="unsigned">-</span>'}</td>`;
+      html += '<td>' + escapeHtml((r.rank || "") + " " + (r.name || "")) + '</td>';
+      html += '<td class="sig">' + (r.img ? ('<img src="' + r.img + '" alt="서명">') : '<span class="unsigned">-</span>') + '</td>';
       html += '</tr>';
     });
     const emptyRows = perCol - colData.length;
+    const totalCols = 4 + (isAll ? 1 : 0);
     for (let i = 0; i < emptyRows; i++) {
-      html += '<tr><td>&nbsp;</td>' + (sortMode !== 'dept' ? '<td></td>' : '') + '<td></td><td></td></tr>';
+      html += '<tr><td>&nbsp;</td>';
+      for (let j = 0; j < totalCols - 1; j++) html += '<td></td>';
+      html += '</tr>';
     }
     html += '</tbody></table>';
   });
   html += '</div>';
 
   if (signed.length === 0) {
-    html += '<div style="text-align:center; padding:40px; color:#999;">해당 날짜에 서명한 사람이 없습니다.</div>';
+    html += '<div style="text-align:center; padding:40px; color:#999;">해당 조건에 서명한 사람이 없습니다.</div>';
   }
   return html;
 }
