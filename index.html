@@ -124,6 +124,40 @@
   .agreement-btn:active { transform:scale(.98); }
   .agreement-btn.selected { background:#1f6b3a; color:#fff; border-color:#1f6b3a; }
   .agreement-btn.disagree.selected { background:#c62828; border-color:#c62828; }
+  /* Print setup */
+  .print-label { display:block; font-size:13px; font-weight:700; color:#0a3a1e; margin: 12px 0 6px; }
+  .print-select { width:100%; padding:12px 14px; border:1px solid #ddd; border-radius:10px; font-family:inherit; font-size:14px; background:#fff; -webkit-appearance:none; appearance:none; }
+  /* Print preview overlay */
+  #printPreview { display:none; position:fixed; inset:0; background:#f5f6f8; z-index:2000; overflow:auto; }
+  .pp-header { position:sticky; top:0; background:#fff; border-bottom:1px solid #e3e6ea; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; z-index:1; }
+  .pp-btn-secondary { padding:8px 16px; background:#fff; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:600; font-size:13px; }
+  .pp-btn-primary { padding:8px 16px; background:#1f6b3a; color:#fff; border:none; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:700; font-size:13px; }
+  .print-content { max-width: 210mm; margin: 20px auto; padding: 20mm 15mm; background:#fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+  .print-content .p-meta { display:flex; justify-content:space-between; padding-bottom:10px; border-bottom:2px solid #1f6b3a; font-size:13px; font-weight:700; color:#0a3a1e; margin-bottom:24px; }
+  .print-content h1 { text-align:center; font-size:24px; font-weight:800; margin:14px 0 6px; }
+  .print-content .p-sub { text-align:center; font-size:12px; color:#777; margin-bottom:18px; font-weight:400; }
+  .print-content .p-stats { text-align:center; font-size:12px; color:#555; margin-bottom:16px; }
+  .print-content .p-stats b { color:#1f6b3a; font-size:14px; }
+  .print-tables { display:flex; gap:12px; align-items:flex-start; }
+  .print-table { flex:1; width:100%; border-collapse:collapse; font-size:12px; }
+  .print-table th, .print-table td { border:1px solid #333; padding:6px 4px; text-align:center; vertical-align:middle; }
+  .print-table th { background:#e6f4ec; font-weight:700; }
+  .print-table td.dept { background:#f5faf7; font-weight:600; writing-mode:vertical-rl; letter-spacing:2px; }
+  .print-table td.sig { min-width:60px; }
+  .print-table td.sig img { max-width:110px; max-height:36px; display:block; margin:0 auto; }
+  .print-table td.sig .unsigned { color:#c62828; font-weight:700; font-size:11px; }
+  @media (max-width: 600px) {
+    .print-content { padding: 15mm 8mm; margin: 8px; }
+    .print-content h1 { font-size:18px; }
+    .print-table { font-size:11px; }
+  }
+  @media print {
+    .app, .sync-banner, .modal-bg { display:none !important; }
+    #printPreview { position:static; background:#fff; overflow:visible; }
+    .pp-header { display:none !important; }
+    .print-content { box-shadow:none; margin:0; padding:0; max-width:none; }
+    @page { size: A4; margin: 15mm; }
+  }
   /* Setup wizard */
   .setup-screen { padding: 32px 24px; min-height: 100vh; }
   .setup-screen h1 { font-size: 24px; color:#0a3a1e; margin-bottom: 6px; }
@@ -331,6 +365,7 @@
       <input type="text" class="search-box" id="searchInput" placeholder="이름 · 직급 · 부서 검색" oninput="renderAdmin()">
 
       <div class="toolbar">
+        <button class="primary" onclick="openPrintSetup()">🖨 서명결과 출력</button>
         <button onclick="exportCSV()">📥 CSV 내보내기</button>
         <button onclick="copySigned()">📋 명단 복사</button>
         <button onclick="lockAdmin()">🔒 잠금</button>
@@ -370,6 +405,49 @@
       <div class="modal-body" id="okBody"></div>
       <button class="modal-btn" onclick="closeModal('okModal'); resetFlow()">확인</button>
     </div>
+  </div>
+
+  <!-- MODAL: print setup -->
+  <div class="modal-bg" id="printSetupModal">
+    <div class="modal" style="max-width:360px; text-align:left;">
+      <div class="modal-icon ok" style="margin-left:auto; margin-right:auto;">🖨</div>
+      <div class="modal-title" style="text-align:center;">인쇄 형식 선택</div>
+      <div style="font-size:13px; color:#666; text-align:center; margin-bottom:20px;">서명등록부를 어떤 형식으로 출력할지 선택해 주세요.</div>
+      <label class="print-label">표 열 수</label>
+      <select id="printCols" class="print-select">
+        <option value="1">1열</option>
+        <option value="2" selected>2열 (기본)</option>
+        <option value="3">3열</option>
+      </select>
+      <label class="print-label">정렬 방식</label>
+      <select id="printSort" class="print-select">
+        <option value="dept" selected>부서별로 모아서 (기본)</option>
+        <option value="time">서명 순서</option>
+        <option value="name">이름순</option>
+      </select>
+      <label class="print-label">서명률 표시</label>
+      <select id="printRate" class="print-select">
+        <option value="yes" selected>포함 (기본)</option>
+        <option value="no">미포함</option>
+      </select>
+      <div style="background:#f7f8fa; padding:10px 12px; border-radius:8px; margin-top:16px; font-size:12px; color:#666; line-height:1.5;">
+        모바일에서는 미리보기 화면이 화면 폭에 맞게 좁게 표시될 수 있어요. 실제 인쇄·PDF 저장 결과물은 PC와 동일한 A4 규격으로 나오니 걱정하지 않으셔도 됩니다.
+      </div>
+      <button class="modal-btn" style="margin-top:16px;" onclick="openPrintPreview()">출력 미리보기</button>
+      <button class="modal-btn ghost" onclick="closeModal('printSetupModal')">취소</button>
+    </div>
+  </div>
+
+  <!-- PRINT PREVIEW OVERLAY -->
+  <div id="printPreview">
+    <div class="pp-header">
+      <div style="font-weight:800; font-size:15px;">🖨 서명등록부 미리보기</div>
+      <div style="display:flex; gap:8px;">
+        <button class="pp-btn-secondary" onclick="closePrintPreview()">닫기</button>
+        <button class="pp-btn-primary" onclick="doPrint()">🖨 인쇄하기</button>
+      </div>
+    </div>
+    <div id="printContent" class="print-content"></div>
   </div>
 
   <!-- MODAL: setup warning -->
@@ -942,6 +1020,107 @@ function copySigned() {
   const text = lines.join('\n');
   navigator.clipboard.writeText(text).then(() => alert(`[${dateKey}] 서명자 ${lines.length}명 명단이 클립보드에 복사되었습니다.\n\n` + text.split('\n').slice(0,5).join('\n') + (lines.length > 5 ? '\n...' : '')));
 }
+
+// ============ 서명결과 출력 ============
+function openPrintSetup() { document.getElementById('printSetupModal').classList.add('show'); }
+
+function openPrintPreview() {
+  const cols = parseInt(document.getElementById('printCols').value, 10) || 2;
+  const sort = document.getElementById('printSort').value;
+  const rate = document.getElementById('printRate').value;
+  document.getElementById('printContent').innerHTML = buildPrintHTML(cols, sort, rate);
+  closeModal('printSetupModal');
+  document.getElementById('printPreview').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+function closePrintPreview() { document.getElementById('printPreview').style.display = 'none'; }
+function doPrint() { window.print(); }
+
+function buildPrintHTML(cols, sortMode, showRate) {
+  const tid = getCurrentTraining();
+  const dateKey = getCurrentDate();
+  const t = TRAININGS.find(x => x.id === tid);
+  const sigs = loadSigs();
+  let signed = Object.values(sigs).filter(s => s.training === tid && s.atDate === dateKey);
+
+  if (sortMode === 'dept') {
+    signed.sort((a, b) => {
+      const dA = ORG_ORDER.indexOf(a.dept); const dB = ORG_ORDER.indexOf(b.dept);
+      const cmp = (dA === -1 ? 999 : dA) - (dB === -1 ? 999 : dB);
+      if (cmp !== 0) return cmp;
+      return (a.atStr || '').localeCompare(b.atStr || '');
+    });
+  } else if (sortMode === 'name') {
+    signed.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  } else {
+    signed.sort((a, b) => (a.atStr || '').localeCompare(b.atStr || ''));
+  }
+
+  const perCol = Math.ceil(signed.length / cols) || 1;
+  const columns = [];
+  for (let i = 0; i < cols; i++) columns.push(signed.slice(i * perCol, (i + 1) * perCol));
+
+  let html = `
+    <div class="p-meta">
+      <div>한양전공(주)</div>
+      <div>서명일: ${dateKey}</div>
+    </div>
+    <h1>${escapeHtml(t.name)} 서명등록부</h1>
+    <div class="p-sub">한양전공(주) · 전자서명 기록 자동 집계</div>
+  `;
+
+  if (showRate === 'yes') {
+    const deptCount = new Set(signed.map(s => s.dept)).size;
+    html += `<div class="p-stats">총 서명 <b>${signed.length}</b>명 · <b>${deptCount}</b>개 부서</div>`;
+  }
+
+  html += '<div class="print-tables">';
+  let globalNum = 0;
+  columns.forEach(colData => {
+    html += '<table class="print-table"><thead><tr><th style="width:36px;">번호</th><th style="width:60px;">부서</th><th>성명</th><th>서명</th></tr></thead><tbody>';
+    const groups = [];
+    if (sortMode === 'dept') {
+      let cur = null;
+      colData.forEach(r => {
+        if (!cur || cur.dept !== r.dept) { cur = { dept: r.dept, count: 0 }; groups.push(cur); }
+        cur.count++;
+      });
+    }
+    let gIdx = 0, gCount = 0;
+    colData.forEach((r, i) => {
+      globalNum++;
+      html += '<tr>';
+      html += `<td>${globalNum}</td>`;
+      if (sortMode === 'dept') {
+        if (gCount === 0) {
+          html += `<td class="dept" rowspan="${groups[gIdx].count}">${escapeHtml(r.dept || '')}</td>`;
+          gCount = groups[gIdx].count;
+          gIdx++;
+        }
+        gCount--;
+      } else {
+        html += `<td>${escapeHtml(r.dept || '')}</td>`;
+      }
+      html += `<td>${escapeHtml((r.rank || '') + ' ' + (r.name || ''))}</td>`;
+      html += `<td class="sig">${r.img ? `<img src="${r.img}" alt="서명">` : '<span class="unsigned">-</span>'}</td>`;
+      html += '</tr>';
+    });
+    const emptyRows = perCol - colData.length;
+    for (let i = 0; i < emptyRows; i++) {
+      html += '<tr><td>&nbsp;</td>' + (sortMode !== 'dept' ? '<td></td>' : '') + '<td></td><td></td></tr>';
+    }
+    html += '</tbody></table>';
+  });
+  html += '</div>';
+
+  if (signed.length === 0) {
+    html += '<div style="text-align:center; padding:40px; color:#999;">해당 날짜에 서명한 사람이 없습니다.</div>';
+  }
+  return html;
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch])); }
 
 // ============ 최초 설정 화면 ============
 function showSetupGate() {
