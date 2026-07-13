@@ -146,6 +146,17 @@
   .print-table td.sig { min-width:60px; }
   .print-table td.sig img { max-width:110px; max-height:36px; display:block; margin:0 auto; }
   .print-table td.sig .unsigned { color:#c62828; font-weight:700; font-size:11px; }
+  /* Flow-based print layout */
+  .print-hrow { display:grid; border:1px solid #333; background:#e6f4ec; font-weight:700; font-size:12px; margin-bottom:-1px; }
+  .print-hrow > div { padding:8px 4px; text-align:center; border-right:1px solid #333; }
+  .print-hrow > div:last-child { border-right:none; }
+  .print-flow { column-gap:0; column-fill:auto; }
+  .print-item { display:grid; border-left:1px solid #333; border-right:1px solid #333; border-bottom:1px solid #333; break-inside:avoid; page-break-inside:avoid; font-size:12px; min-height:36px; }
+  .print-item > div { padding:3px 4px; text-align:center; border-right:1px solid #333; display:flex; align-items:center; justify-content:center; overflow:hidden; word-break:keep-all; }
+  .print-item > div:last-child { border-right:none; }
+  .print-item .sig { padding:2px; }
+  .print-item .sig img { max-width:90px; max-height:30px; }
+  .print-item .sig .unsigned { color:#c62828; font-weight:700; font-size:11px; }
   @media (max-width: 600px) {
     .print-content { padding: 15mm 8mm; margin: 8px; }
     .print-content h1 { font-size:18px; }
@@ -157,9 +168,11 @@
     #printPreview, #printPreview * { visibility:visible !important; }
     #printPreview { display:block !important; position:absolute !important; top:0 !important; left:0 !important; width:100% !important; background:#fff !important; overflow:visible !important; }
     .pp-header { display:none !important; }
-    .print-content { box-shadow:none !important; margin:0 !important; padding:0 !important; max-width:none !important; }
+    .print-content { box-shadow:none !important; margin:0 !important; padding:0 !important; max-width:none !important; width:100% !important; }
+    .print-item { break-inside:avoid !important; page-break-inside:avoid !important; }
+    .print-item .sig img { max-width:90px !important; max-height:28px !important; }
     .print-table td.sig img { max-width:110px !important; max-height:36px !important; }
-    @page { size: A4; margin: 15mm; }
+    @page { size: A4; margin: 8mm; }
   }
   /* Setup wizard */
   .setup-screen { padding: 32px 24px; min-height: 100vh; }
@@ -1110,12 +1123,14 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
     signed.sort((a, b) => (a.atStr || "").localeCompare(b.atStr || ""));
   }
 
-  const perCol = Math.ceil(signed.length / cols) || 1;
-  const columns = [];
-  for (let i = 0; i < cols; i++) columns.push(signed.slice(i * perCol, (i + 1) * perCol));
-
   const dateLabel = (df && dt && df !== dt) ? (df + " ~ " + dt) : (df || "전체 기간");
   const titleLabel = isAll ? "전체" : t.name;
+
+  let gridCols = "32px ";
+  if (isAll) gridCols += "58px ";
+  gridCols += "68px 1fr ";
+  if (isAgreement) gridCols += "58px ";
+  gridCols += "96px";
 
   let html = ""
     + '<div class="p-meta">'
@@ -1131,61 +1146,33 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
     html += '<div class="p-stats">총 서명 <b>' + signed.length + '</b>명 · <b>' + deptCount + '</b>개 부서' + (isAll ? (' · <b>' + trainingCount + '</b>개 교육') : '') + '</div>';
   }
 
-  html += '<div class="print-tables">';
-  let globalNum = 0;
-  columns.forEach(colData => {
-    html += '<table class="print-table"><thead><tr>';
-    html += '<th style="width:32px;">번호</th>';
-    if (isAll) html += '<th style="width:70px;">교육</th>';
-    html += '<th style="width:56px;">부서</th><th>성명</th>';
-    if (isAgreement) html += '<th style="width:70px;">동의 여부</th>';
-    html += '<th>서명</th>';
-    html += '</tr></thead><tbody>';
-    const groups = [];
-    if (sortMode === "dept") {
-      let cur = null;
-      colData.forEach(r => {
-        const key = isAll ? (r.training + "|" + r.dept) : r.dept;
-        if (!cur || cur.key !== key) { cur = { key: key, dept: r.dept, count: 0 }; groups.push(cur); }
-        cur.count++;
-      });
+  html += '<div class="print-hrow" style="grid-template-columns:' + gridCols + ';">';
+  html += '<div>번호</div>';
+  if (isAll) html += '<div>교육</div>';
+  html += '<div>부서</div>';
+  html += '<div>성명</div>';
+  if (isAgreement) html += '<div>동의 여부</div>';
+  html += '<div>서명</div>';
+  html += '</div>';
+
+  html += '<div class="print-flow" style="column-count:' + cols + ';">';
+  signed.forEach((r, i) => {
+    const num = i + 1;
+    const tRec = TRAININGS.find(x => x.id === r.training);
+    const tName = tRec ? tRec.name.replace("교육", "").replace(" 개정 동의", "").trim() : (r.trainingName || "");
+    html += '<div class="print-item" style="grid-template-columns:' + gridCols + ';">';
+    html += '<div>' + num + '</div>';
+    if (isAll) html += '<div style="font-size:10px;">' + escapeHtml(tName) + '</div>';
+    html += '<div style="font-size:11px;">' + escapeHtml(r.dept || "") + '</div>';
+    html += '<div>' + escapeHtml((r.rank || "") + " " + (r.name || "")) + '</div>';
+    if (isAgreement) {
+      const mA = (r.trainingName || "").match(/\(([^)]+)\)\s*$/);
+      const valA = mA ? mA[1] : "";
+      const colorA = valA === "동의함" ? "#1f6b3a" : (valA === "동의하지 않음" ? "#c62828" : "#999");
+      html += '<div style="color:' + colorA + '; font-weight:800; font-size:11px;">' + escapeHtml(valA || "-") + '</div>';
     }
-    let gIdx = 0, gCount = 0;
-    colData.forEach((r, i) => {
-      globalNum++;
-      const tRec = TRAININGS.find(x => x.id === r.training);
-      const tName = tRec ? tRec.name.replace("교육", "").replace(" 개정 동의", "").trim() : (r.trainingName || "");
-      html += '<tr>';
-      html += '<td>' + globalNum + '</td>';
-      if (isAll) html += '<td style="font-size:10px;">' + escapeHtml(tName) + '</td>';
-      if (sortMode === "dept") {
-        if (gCount === 0) {
-          html += '<td class="dept" rowspan="' + groups[gIdx].count + '">' + escapeHtml(r.dept || "") + '</td>';
-          gCount = groups[gIdx].count;
-          gIdx++;
-        }
-        gCount--;
-      } else {
-        html += '<td>' + escapeHtml(r.dept || "") + '</td>';
-      }
-      html += '<td>' + escapeHtml((r.rank || "") + " " + (r.name || "")) + '</td>';
-      if (isAgreement) {
-        const mA = (r.trainingName || "").match(/\(([^)]+)\)\s*$/);
-        const valA = mA ? mA[1] : "";
-        const colorA = valA === "동의함" ? "#1f6b3a" : (valA === "동의하지 않음" ? "#c62828" : "#999");
-        html += '<td style="color:' + colorA + '; font-weight:800;">' + escapeHtml(valA || "-") + '</td>';
-      }
-      html += '<td class="sig">' + (r.img ? ('<img src="' + r.img + '" alt="서명">') : '<span class="unsigned">-</span>') + '</td>';
-      html += '</tr>';
-    });
-    const emptyRows = perCol - colData.length;
-    const totalCols = 4 + (isAll ? 1 : 0) + (isAgreement ? 1 : 0);
-    for (let i = 0; i < emptyRows; i++) {
-      html += '<tr><td>&nbsp;</td>';
-      for (let j = 0; j < totalCols - 1; j++) html += '<td></td>';
-      html += '</tr>';
-    }
-    html += '</tbody></table>';
+    html += '<div class="sig">' + (r.img ? ('<img src="' + r.img + '" alt="서명">') : '<span class="unsigned">-</span>') + '</div>';
+    html += '</div>';
   });
   html += '</div>';
 
