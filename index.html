@@ -152,10 +152,13 @@
     .print-table { font-size:11px; }
   }
   @media print {
-    .app, .sync-banner, .modal-bg { display:none !important; }
-    #printPreview { position:static; background:#fff; overflow:visible; }
+    html, body { margin:0; padding:0; background:#fff; }
+    body * { visibility:hidden !important; }
+    #printPreview, #printPreview * { visibility:visible !important; }
+    #printPreview { display:block !important; position:absolute !important; top:0 !important; left:0 !important; width:100% !important; background:#fff !important; overflow:visible !important; }
     .pp-header { display:none !important; }
-    .print-content { box-shadow:none; margin:0; padding:0; max-width:none; }
+    .print-content { box-shadow:none !important; margin:0 !important; padding:0 !important; max-width:none !important; }
+    .print-table td.sig img { max-width:110px !important; max-height:36px !important; }
     @page { size: A4; margin: 15mm; }
   }
   /* Setup wizard */
@@ -1060,7 +1063,19 @@ function openPrintPreview() {
 }
 
 function closePrintPreview() { document.getElementById('printPreview').style.display = 'none'; }
-function doPrint() { window.print(); }
+async function doPrint() {
+  const imgs = Array.from(document.querySelectorAll('#printContent img'));
+  await Promise.all(imgs.map(img => {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+    return new Promise(resolve => {
+      const done = () => { img.onload = null; img.onerror = null; resolve(); };
+      img.onload = done;
+      img.onerror = done;
+      setTimeout(done, 4000);
+    });
+  }));
+  window.print();
+}
 
 function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) {
   const isAll = !trainingId || trainingId === "__all__";
