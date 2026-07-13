@@ -858,9 +858,11 @@ async function pullRemote(showBanner) {
           training: tid, trainingName: r.trainingName,
           dept: r.dept, rank: r.rank, name: r.name,
           atStr: r.atStr, atDate: r.atDate,
-          synced: true, remote: true, img: ''
+          synced: true, remote: true, img: r.img || ''
         };
         merged++;
+      } else if (!local[key].img && r.img) {
+        local[key].img = r.img;
       }
     });
     saveSigs(local);
