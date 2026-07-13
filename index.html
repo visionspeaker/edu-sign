@@ -138,7 +138,7 @@
   .print-content .p-sub { text-align:center; font-size:12px; color:#777; margin-bottom:18px; font-weight:400; }
   .print-content .p-stats { text-align:center; font-size:12px; color:#555; margin-bottom:16px; }
   .print-content .p-stats b { color:#1f6b3a; font-size:14px; }
-  .print-tables { display:flex; gap:12px; align-items:flex-start; }
+  .print-tables { display:flex; gap:6px; align-items:flex-start; margin-bottom:4px; }
   .print-table { flex:1; width:100%; border-collapse:collapse; font-size:12px; }
   .print-table th, .print-table td { border:1px solid #333; padding:6px 4px; text-align:center; vertical-align:middle; }
   .print-table th { background:#e6f4ec; font-weight:700; }
@@ -1126,11 +1126,11 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
   const dateLabel = (df && dt && df !== dt) ? (df + " ~ " + dt) : (df || "전체 기간");
   const titleLabel = isAll ? "전체" : t.name;
 
-  let gridCols = "32px ";
-  if (isAll) gridCols += "58px ";
-  gridCols += "68px 1fr ";
-  if (isAgreement) gridCols += "58px ";
-  gridCols += "96px";
+  const ROWS_PER_COL = 25;
+  const rowsPerPage = ROWS_PER_COL * cols;
+  const pages = [];
+  for (let pp = 0; pp < signed.length; pp += rowsPerPage) pages.push(signed.slice(pp, pp + rowsPerPage));
+  if (pages.length === 0) pages.push([]);
 
   let html = ""
     + '<div class="p-meta">'
@@ -1146,35 +1146,51 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
     html += '<div class="p-stats">총 서명 <b>' + signed.length + '</b>명 · <b>' + deptCount + '</b>개 부서' + (isAll ? (' · <b>' + trainingCount + '</b>개 교육') : '') + '</div>';
   }
 
-  html += '<div class="print-hrow" style="grid-template-columns:' + gridCols + ';">';
-  html += '<div>번호</div>';
-  if (isAll) html += '<div>교육</div>';
-  html += '<div>부서</div>';
-  html += '<div>성명</div>';
-  if (isAgreement) html += '<div>동의 여부</div>';
-  html += '<div>서명</div>';
-  html += '</div>';
+  let globalNum = 0;
+  pages.forEach((pageData, pageIdx) => {
+    if (pageIdx > 0) html += '<div style="page-break-before:always; height:0;"></div>';
+    const perCol = Math.ceil(pageData.length / cols) || 1;
+    const columns = [];
+    for (let ci = 0; ci < cols; ci++) columns.push(pageData.slice(ci * perCol, (ci + 1) * perCol));
 
-  html += '<div class="print-flow" style="column-count:' + cols + ';">';
-  signed.forEach((r, i) => {
-    const num = i + 1;
-    const tRec = TRAININGS.find(x => x.id === r.training);
-    const tName = tRec ? tRec.name.replace("교육", "").replace(" 개정 동의", "").trim() : (r.trainingName || "");
-    html += '<div class="print-item" style="grid-template-columns:' + gridCols + ';">';
-    html += '<div>' + num + '</div>';
-    if (isAll) html += '<div style="font-size:10px;">' + escapeHtml(tName) + '</div>';
-    html += '<div style="font-size:11px;">' + escapeHtml(r.dept || "") + '</div>';
-    html += '<div>' + escapeHtml((r.rank || "") + " " + (r.name || "")) + '</div>';
-    if (isAgreement) {
-      const mA = (r.trainingName || "").match(/\(([^)]+)\)\s*$/);
-      const valA = mA ? mA[1] : "";
-      const colorA = valA === "동의함" ? "#1f6b3a" : (valA === "동의하지 않음" ? "#c62828" : "#999");
-      html += '<div style="color:' + colorA + '; font-weight:800; font-size:11px;">' + escapeHtml(valA || "-") + '</div>';
-    }
-    html += '<div class="sig">' + (r.img ? ('<img src="' + r.img + '" alt="서명">') : '<span class="unsigned">-</span>') + '</div>';
+    html += '<div class="print-tables">';
+    columns.forEach(colData => {
+      html += '<table class="print-table"><thead><tr>';
+      html += '<th style="width:32px;">번호</th>';
+      if (isAll) html += '<th style="width:58px;">교육</th>';
+      html += '<th style="width:70px;">부서</th><th>성명</th>';
+      if (isAgreement) html += '<th style="width:60px;">동의 여부</th>';
+      html += '<th style="width:96px;">서명</th>';
+      html += '</tr></thead><tbody>';
+      colData.forEach(r => {
+        globalNum++;
+        const tRec = TRAININGS.find(x => x.id === r.training);
+        const tName = tRec ? tRec.name.replace("교육", "").replace(" 개정 동의", "").trim() : (r.trainingName || "");
+        html += '<tr>';
+        html += '<td>' + globalNum + '</td>';
+        if (isAll) html += '<td style="font-size:10px;">' + escapeHtml(tName) + '</td>';
+        html += '<td style="font-size:11px;">' + escapeHtml(r.dept || "") + '</td>';
+        html += '<td>' + escapeHtml((r.rank || "") + " " + (r.name || "")) + '</td>';
+        if (isAgreement) {
+          const mA = (r.trainingName || "").match(/\(([^)]+)\)\s*$/);
+          const valA = mA ? mA[1] : "";
+          const colorA = valA === "동의함" ? "#1f6b3a" : (valA === "동의하지 않음" ? "#c62828" : "#999");
+          html += '<td style="color:' + colorA + '; font-weight:800;">' + escapeHtml(valA || "-") + '</td>';
+        }
+        html += '<td class="sig">' + (r.img ? ('<img src="' + r.img + '" alt="서명">') : '<span class="unsigned">-</span>') + '</td>';
+        html += '</tr>';
+      });
+      const emptyRows = perCol - colData.length;
+      const totalCols = 4 + (isAll ? 1 : 0) + (isAgreement ? 1 : 0);
+      for (let er = 0; er < emptyRows; er++) {
+        html += '<tr><td>&nbsp;</td>';
+        for (let ec = 0; ec < totalCols - 1; ec++) html += '<td></td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+    });
     html += '</div>';
   });
-  html += '</div>';
 
   if (signed.length === 0) {
     html += '<div style="text-align:center; padding:40px; color:#999;">해당 조건에 서명한 사람이 없습니다.</div>';
