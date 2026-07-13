@@ -418,10 +418,11 @@
         <option value="__all__">전체 교육</option>
       </select>
       <label class="print-label">서명 기간</label>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <input type="date" id="printDateFrom" class="print-select" style="flex:1;">
-        <span style="font-size:14px; color:#666; font-weight:700;">~</span>
-        <input type="date" id="printDateTo" class="print-select" style="flex:1;">
+      <div style="display:grid; grid-template-columns: 52px 1fr; gap:8px 10px; align-items:center;">
+        <div style="font-size:12px; color:#666; font-weight:700;">시작일</div>
+        <input type="date" id="printDateFrom" class="print-select" style="min-width:0;">
+        <div style="font-size:12px; color:#666; font-weight:700;">종료일</div>
+        <input type="date" id="printDateTo" class="print-select" style="min-width:0;">
       </div>
       <label class="print-label">표 열 수</label>
       <select id="printCols" class="print-select">
