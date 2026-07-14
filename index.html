@@ -47,6 +47,10 @@
   .training-card { display:flex; align-items:center; gap:14px; padding:18px 16px; background:#fff; border:2px solid #eef0f3; border-radius:14px; cursor:pointer; transition: all .15s; }
   .training-card:active { transform: scale(.99); }
   .training-card.selected { border-color:#1f6b3a; background:#f3f9f5; }
+  .training-card[data-id="agreement_v9"] { border-color:#f57c00; }
+  .training-card[data-id="agreement_v9"].selected { border-color:#e65100; background:#fff3e0; }
+  .training-card[data-id="agreement_v9"] .training-icon { background:#ffe0b2; }
+  .training-card[data-id="agreement_v9"].selected .training-icon { background:#e65100; color:#fff; }
   .training-icon { width:42px; height:42px; border-radius:10px; background:#eef0f3; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
   .training-card.selected .training-icon { background:#1f6b3a; color:#fff; }
   .training-info { flex:1; min-width:0; }
