@@ -153,7 +153,7 @@
   .print-table td.sig { min-width:60px; }
   .print-table td.sig img { max-width:110px; max-height:36px; display:block; margin:0 auto; }
   .print-table td.sig .unsigned { color:#c62828; font-weight:700; font-size:11px; }
-  /* Flow-based print layout */
+  /* Flow-based print layout (columns continue across pages) */
   .print-hrow { display:grid; border:1px solid #333; background:#e6f4ec; font-weight:700; font-size:12px; margin-bottom:-1px; }
   .print-hrow > div { padding:8px 4px; text-align:center; border-right:1px solid #333; }
   .print-hrow > div:last-child { border-right:none; }
@@ -176,9 +176,10 @@
     #printPreview { display:block !important; position:absolute !important; top:0 !important; left:0 !important; width:100% !important; background:#fff !important; overflow:visible !important; }
     .pp-header { display:none !important; }
     .print-content { box-shadow:none !important; margin:0 !important; padding:0 !important; max-width:none !important; width:100% !important; }
+    .print-tables { display:flex !important; width:100% !important; gap:4px !important; margin:0 !important; }
+    .print-table { flex:1 1 0 !important; width:50% !important; min-width:0 !important; max-width:none !important; table-layout:fixed !important; border-collapse:collapse !important; }
     .print-item { break-inside:avoid !important; page-break-inside:avoid !important; }
     .print-item .sig img { max-width:90px !important; max-height:28px !important; }
-    .print-table td.sig img { max-width:110px !important; max-height:36px !important; }
     @page { size: A4; margin: 8mm; }
   }
   /* Setup wizard */
@@ -499,10 +500,10 @@
 // ============ 데이터 ============
 const TRAININGS = [
   { id:'agreement_v9',  icon:'✍️', name:'취업규칙 9차 개정 동의',    desc:'동의서' },
-  { id:'safety',     icon:'🦺', name:'안전보건교육',   desc:'정기 안전보건 교육 (산업안전보건법)' },
-  { id:'mandatory',  icon:'📋', name:'법정의무교육',   desc:'개인정보보호·성희롱·괴롭힘·장애인 인식개선 등' },
-  { id:'special',    icon:'⚠️', name:'특별교육',       desc:'유해·위험작업 종사자 별도 안전교육' },
-  { id:'adhoc',      icon:'💡', name:'수시교육',       desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' }
+  { id:'safety',        icon:'🦺', name:'안전보건교육',              desc:'정기 안전보건 교육 (산업안전보건법)' },
+  { id:'mandatory',     icon:'📋', name:'법정의무교육',              desc:'개인정보보호·성희롱·괴롭힘·장애인 인식개선 등' },
+  { id:'special',       icon:'⚠️', name:'특별교육',                  desc:'유해·위험작업 종사자 별도 안전교육' },
+  { id:'adhoc',         icon:'💡', name:'수시교육',                  desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' }
 ];
 const NAME_TO_ID = {};
 TRAININGS.forEach(t => NAME_TO_ID[t.name] = t.id);
@@ -971,53 +972,66 @@ function renderAdmin() {
   const sigs = loadSigs();
   const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
 
-  let total = 0, signed = 0;
-  ORG_ORDER.forEach(dept => {
-    ORG[dept].forEach(p => {
-      total++;
-      if (sigs[makeKey(tid, dept, p.name, dateKey)]) signed++;
-    });
-  });
-  document.getElementById('signedNum').textContent = signed;
-  document.getElementById('unsignedNum').textContent = total - signed;
-  document.getElementById('ratePct').textContent = total ? Math.round(signed/total*100) + '%' : '0%';
+  // 해당 교육·날짜의 모든 서명 추출
+  const allSigned = Object.values(sigs).filter(s =>
+    s.training === tid && s.atDate === dateKey
+  );
 
+  // 검색 필터
+  const filtered = allSigned.filter(s => {
+    if (!q) return true;
+    return (s.name || '').toLowerCase().includes(q) ||
+           (s.dept || '').toLowerCase().includes(q) ||
+           (s.rank || '').toLowerCase().includes(q);
+  });
+
+  // 부서별 그룹
+  const byDept = {};
+  filtered.forEach(s => {
+    if (!byDept[s.dept]) byDept[s.dept] = [];
+    byDept[s.dept].push(s);
+  });
+  // 부서 내 시간순 정렬
+  Object.values(byDept).forEach(arr =>
+    arr.sort((a, b) => (a.atStr || '').localeCompare(b.atStr || ''))
+  );
+
+  // 통계
+  document.getElementById('signedNum').textContent = allSigned.length;
+  const allDeptSet = new Set(allSigned.map(s => s.dept));
+  document.getElementById('deptNum').textContent = allDeptSet.size;
+
+  // ORG_ORDER 기준 부서 순서, 그 외 부서는 뒤에
   let html = '';
-  ORG_ORDER.forEach(dept => {
-    const arr = ORG[dept];
-    const rows = arr.map(p => {
-      const sig = sigs[makeKey(tid, dept, p.name, dateKey)];
-      return { ...p, dept, sig };
-    }).filter(r => {
-      if (adminFilter === 'signed' && !r.sig) return false;
-      if (adminFilter === 'unsigned' && r.sig) return false;
-      if (q && !(r.name.toLowerCase().includes(q) || dept.toLowerCase().includes(q))) return false;
-      return true;
-    });
-    if (rows.length === 0) return;
-    const deptSigned = arr.filter(p => sigs[makeKey(tid, dept, p.name, dateKey)]).length;
+  const knownDepts = ORG_ORDER.filter(d => byDept[d]);
+  const unknownDepts = Object.keys(byDept).filter(d => !ORG_ORDER.includes(d)).sort();
+  const allDepts = [...knownDepts, ...unknownDepts];
+
+  allDepts.forEach(dept => {
+    const rows = byDept[dept];
+    if (!rows || rows.length === 0) return;
     html += `<div class="dept-block open">
       <div class="dept-head" onclick="this.parentElement.classList.toggle('open')">
         <span>${dept}</span>
-        <span class="ratio">${deptSigned}/${arr.length}</span>
+        <span class="ratio">${rows.length}명</span>
       </div>
       <div class="dept-body">
         ${rows.map(r => `
           <div class="emp-row">
             <div>
-              <div>${r.rank} ${r.name}</div>
-              ${r.sig ? `<div class="meta">${r.sig.atStr}</div>` : ''}
+              <div>${r.rank || ''} ${r.name || ''}</div>
+              <div class="meta">${r.atStr || ''}</div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-              ${r.sig && r.sig.img ? `<img class="sig-thumb" src="${r.sig.img}" alt="서명">` : ''}
-              ${r.sig ? '<span class="badge-ok">완료</span>' : '<span class="badge-no">미서명</span>'}
+              ${r.img ? `<img class="sig-thumb" src="${r.img}" alt="서명">` : ''}
+              <span class="badge-ok">완료</span>
             </div>
           </div>
         `).join('')}
       </div>
     </div>`;
   });
-  if (!html) html = '<div class="empty-state">표시할 항목이 없습니다.</div>';
+  if (!html) html = '<div class="empty-state">해당 날짜에 서명한 사람이 없습니다.</div>';
   document.getElementById('adminBody').innerHTML = html;
 }
 
@@ -1059,10 +1073,12 @@ function copySigned() {
 
 // ============ 서명결과 출력 ============
 function openPrintSetup() {
+  // 교육 dropdown 채우기
   const sel = document.getElementById('printTraining');
   const currentTid = getCurrentTraining();
   sel.innerHTML = '<option value="__all__">전체 교육</option>' +
-    TRAININGS.map(t => '<option value="' + t.id + '"' + (t.id === currentTid ? ' selected' : '') + '>' + t.name + '</option>').join('');
+    TRAININGS.map(t => `<option value="${t.id}"${t.id === currentTid ? ' selected' : ''}>${t.name}</option>`).join('');
+  // 기간 기본값 = 현재 관리자 선택 날짜
   const currentDate = getCurrentDate();
   document.getElementById('printDateFrom').value = currentDate;
   document.getElementById('printDateTo').value = currentDate;
@@ -1084,6 +1100,7 @@ function openPrintPreview() {
 
 function closePrintPreview() { document.getElementById('printPreview').style.display = 'none'; }
 async function doPrint() {
+  // Drive 이미지 로딩 대기
   const imgs = Array.from(document.querySelectorAll('#printContent img'));
   await Promise.all(imgs.map(img => {
     if (img.complete && img.naturalWidth > 0) return Promise.resolve();
@@ -1098,20 +1115,20 @@ async function doPrint() {
 }
 
 function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) {
-  const isAll = !trainingId || trainingId === "__all__";
-  const isAgreement = !isAll && trainingId === "agreement_v9";
+  const isAll = !trainingId || trainingId === '__all__';
+  const isAgreement = !isAll && trainingId === 'agreement_v9';
   const t = isAll ? null : TRAININGS.find(x => x.id === trainingId);
-  const df = dateFrom || "";
+  const df = dateFrom || '';
   const dt = dateTo || df;
   const sigs = loadSigs();
   let signed = Object.values(sigs).filter(s => {
     if (!isAll && s.training !== trainingId) return false;
-    if (df && (s.atDate || "") < df) return false;
-    if (dt && (s.atDate || "") > dt) return false;
+    if (df && (s.atDate || '') < df) return false;
+    if (dt && (s.atDate || '') > dt) return false;
     return true;
   });
 
-  if (sortMode === "dept") {
+  if (sortMode === 'dept') {
     signed.sort((a, b) => {
       if (isAll) {
         const tA = TRAININGS.findIndex(x => x.id === a.training);
@@ -1122,40 +1139,45 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
       const dA = ORG_ORDER.indexOf(a.dept); const dB = ORG_ORDER.indexOf(b.dept);
       const cmp = (dA === -1 ? 999 : dA) - (dB === -1 ? 999 : dB);
       if (cmp !== 0) return cmp;
-      return (a.atStr || "").localeCompare(b.atStr || "");
+      return (a.atStr || '').localeCompare(b.atStr || '');
     });
-  } else if (sortMode === "name") {
-    signed.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  } else if (sortMode === 'name') {
+    signed.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   } else {
-    signed.sort((a, b) => (a.atStr || "").localeCompare(b.atStr || ""));
+    signed.sort((a, b) => (a.atStr || '').localeCompare(b.atStr || ''));
   }
 
-  const dateLabel = (df && dt && df !== dt) ? (df + " ~ " + dt) : (df || "전체 기간");
-  const titleLabel = isAll ? "전체" : t.name;
+  const dateLabel = (df && dt && df !== dt) ? `${df} ~ ${dt}` : (df || '전체 기간');
+  const titleLabel = isAll ? '전체' : t.name;
 
+  // 페이지 단위로 chunk. 컬럼당 25행 기준 (A4 여백 8mm)
   const ROWS_PER_COL = 26;
   const rowsPerPage = ROWS_PER_COL * cols;
   const pages = [];
-  for (let pp = 0; pp < signed.length; pp += rowsPerPage) pages.push(signed.slice(pp, pp + rowsPerPage));
+  for (let p = 0; p < signed.length; p += rowsPerPage) pages.push(signed.slice(p, p + rowsPerPage));
   if (pages.length === 0) pages.push([]);
 
-  let html = ""
-    + '<div class="p-meta">'
-    +   '<div>한양전공(주)</div>'
-    +   '<div>서명 기간: ' + dateLabel + '</div>'
-    + '</div>'
-    + '<h1>' + escapeHtml(titleLabel) + ' 서명등록부</h1>'
-    + '<div class="p-sub">한양전공(주) · 전자서명 기록 자동 집계</div>';
+  let html = `
+    <div class="p-meta">
+      <div>한양전공(주)</div>
+      <div>서명 기간: ${dateLabel}</div>
+    </div>
+    <h1>${escapeHtml(titleLabel)} 서명등록부</h1>
+    <div class="p-sub">한양전공(주) · 전자서명 기록 자동 집계</div>
+  `;
 
-  if (showRate === "yes") {
+  if (showRate === 'yes') {
     const deptCount = new Set(signed.map(s => s.dept)).size;
     const trainingCount = new Set(signed.map(s => s.training)).size;
-    html += '<div class="p-stats">총 서명 <b>' + signed.length + '</b>명 · <b>' + deptCount + '</b>개 부서' + (isAll ? (' · <b>' + trainingCount + '</b>개 교육') : '') + '</div>';
+    html += `<div class="p-stats">총 서명 <b>${signed.length}</b>명 · <b>${deptCount}</b>개 부서${isAll ? ` · <b>${trainingCount}</b>개 교육` : ''}</div>`;
   }
 
   let globalNum = 0;
   pages.forEach((pageData, pageIdx) => {
-    if (pageIdx > 0) html += '<div style="page-break-before:always; height:0;"></div>';
+    if (pageIdx > 0) {
+      html += '<div style="page-break-before:always; height:0;"></div>';
+    }
+    // 페이지 내 컬럼 분할
     const perCol = Math.ceil(pageData.length / cols) || 1;
     const columns = [];
     for (let ci = 0; ci < cols; ci++) columns.push(pageData.slice(ci * perCol, (ci + 1) * perCol));
@@ -1166,32 +1188,35 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
       html += '<th style="width:28px;">번호</th>';
       if (isAll) html += '<th style="width:54px;">교육</th>';
       if (isAgreement) {
-        html += '<th style="width:78px;">부서</th><th style="width:80px;">성명</th>';
-        html += '<th style="width:58px;">동의 여부</th>';
-        html += '<th style="width:100px;">서명</th>';
+        html += '<th style="width:23%;">부서</th><th style="width:24%;">성명</th>';
+        html += '<th style="width:16%;">동의 여부</th>';
+        html += '<th style="width:29%;">서명</th>';
       } else {
         html += '<th style="width:62px;">부서</th><th>성명</th>';
         html += '<th style="width:82px;">서명</th>';
       }
       html += '</tr></thead><tbody>';
+
       colData.forEach(r => {
         globalNum++;
         const tRec = TRAININGS.find(x => x.id === r.training);
-        const tName = tRec ? tRec.name.replace("교육", "").replace(" 개정 동의", "").trim() : (r.trainingName || "");
+        const tName = tRec ? tRec.name.replace('교육', '').replace(' 개정 동의', '').trim() : (r.trainingName || '');
         html += '<tr>';
-        html += '<td>' + globalNum + '</td>';
-        if (isAll) html += '<td style="font-size:10px;">' + escapeHtml(tName) + '</td>';
-        html += '<td style="font-size:11px;">' + escapeHtml(r.dept || "") + '</td>';
-        html += '<td>' + escapeHtml((r.rank || "") + " " + (r.name || "")) + '</td>';
+        html += `<td>${globalNum}</td>`;
+        if (isAll) html += `<td style="font-size:10px;">${escapeHtml(tName)}</td>`;
+        html += `<td style="font-size:11px;">${escapeHtml(r.dept || '')}</td>`;
+        html += `<td>${escapeHtml((r.rank || '') + ' ' + (r.name || ''))}</td>`;
         if (isAgreement) {
-          const mA = (r.trainingName || "").match(/\(([^)]+)\)\s*$/);
-          const valA = mA ? mA[1] : "";
-          const colorA = valA === "동의함" ? "#1f6b3a" : (valA === "동의하지 않음" ? "#c62828" : "#999");
-          html += '<td style="color:' + colorA + '; font-weight:800;">' + escapeHtml(valA || "-") + '</td>';
+          const m = (r.trainingName || '').match(/\(([^)]+)\)\s*$/);
+          const val = m ? m[1] : '';
+          const color = val === '동의함' ? '#1f6b3a' : (val === '동의하지 않음' ? '#c62828' : '#999');
+          html += `<td style="color:${color}; font-weight:800;">${escapeHtml(val || '-')}</td>`;
         }
-        html += '<td class="sig">' + (r.img ? ('<img src="' + r.img + '" alt="서명">') : '<span class="unsigned">-</span>') + '</td>';
+        html += `<td class="sig">${r.img ? `<img src="${r.img}" alt="서명">` : '<span class="unsigned">-</span>'}</td>`;
         html += '</tr>';
       });
+
+      // Empty rows to balance columns
       const emptyRows = perCol - colData.length;
       const totalCols = 4 + (isAll ? 1 : 0) + (isAgreement ? 1 : 0);
       for (let er = 0; er < emptyRows; er++) {
@@ -1199,6 +1224,7 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
         for (let ec = 0; ec < totalCols - 1; ec++) html += '<td></td>';
         html += '</tr>';
       }
+
       html += '</tbody></table>';
     });
     html += '</div>';
@@ -1210,7 +1236,7 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
   return html;
 }
 
-function escapeHtml(s) { return String(s).replace(/[&<>"']/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch])); }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
 // ============ 최초 설정 화면 ============
 function showSetupGate() {
