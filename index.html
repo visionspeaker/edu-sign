@@ -47,10 +47,10 @@
   .training-card { display:flex; align-items:center; gap:14px; padding:18px 16px; background:#fff; border:2px solid #eef0f3; border-radius:14px; cursor:pointer; transition: all .15s; }
   .training-card:active { transform: scale(.99); }
   .training-card.selected { border-color:#1f6b3a; background:#f3f9f5; }
-  .training-card[data-id="agreement_v9"] { border-color:#f57c00; }
-  .training-card[data-id="agreement_v9"].selected { border-color:#e65100; background:#fff3e0; }
-  .training-card[data-id="agreement_v9"] .training-icon { background:#ffe0b2; }
-  .training-card[data-id="agreement_v9"].selected .training-icon { background:#e65100; color:#fff; }
+  .training-card.disabled { cursor:not-allowed; background:#f5f6f8; border-color:#e3e6ea; opacity:.55; }
+  .training-card.disabled:active { transform:none; }
+  .training-card.disabled .chev { display:none; }
+  .training-card.disabled .training-desc { color:#c62828; font-weight:600; }
   .training-icon { width:42px; height:42px; border-radius:10px; background:#eef0f3; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
   .training-card.selected .training-icon { background:#1f6b3a; color:#fff; }
   .training-info { flex:1; min-width:0; }
@@ -501,11 +501,12 @@
 <script>
 // ============ 데이터 ============
 const TRAININGS = [
-  { id:'agreement_v9',  icon:'✍️', name:'취업규칙 9차 개정 동의',    desc:'동의서' },
   { id:'safety',        icon:'🦺', name:'안전보건교육',              desc:'정기 안전보건 교육 (산업안전보건법)' },
   { id:'mandatory',     icon:'📋', name:'법정의무교육',              desc:'개인정보보호·성희롱·괴롭힘·장애인 인식개선 등' },
   { id:'special',       icon:'⚠️', name:'특별교육',                  desc:'유해·위험작업 종사자 별도 안전교육' },
-  { id:'adhoc',         icon:'💡', name:'수시교육',                  desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' }
+  { id:'adhoc',         icon:'💡', name:'수시교육',                  desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' },
+  // 아래 항목은 동의 기간 종료 후 비활성화. 재활용 시 name/desc를 바꾸고 disabled:false로 변경.
+  { id:'agreement_v9',  icon:'✍️', name:'취업규칙 9차 개정 동의',    desc:'동의 기간 종료',  disabled:true }
 ];
 const NAME_TO_ID = {};
 TRAININGS.forEach(t => NAME_TO_ID[t.name] = t.id);
@@ -613,7 +614,7 @@ function init() {
   document.getElementById('dateLabel').textContent = `📅 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
 
   document.getElementById('trainingList').innerHTML = TRAININGS.map(t => `
-    <div class="training-card" data-id="${t.id}" onclick="selectTraining('${t.id}')">
+    <div class="training-card${t.disabled ? ' disabled' : ''}" data-id="${t.id}"${t.disabled ? '' : ` onclick="selectTraining('${t.id}')"`}>
       <div class="training-icon">${t.icon}</div>
       <div class="training-info">
         <div class="training-name">${t.name}</div>
