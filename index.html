@@ -51,6 +51,26 @@
   .training-card.disabled:active { transform:none; }
   .training-card.disabled .chev { display:none; }
   .training-card.disabled .training-desc { color:#c62828; font-weight:600; }
+  /* 교육 메뉴 관리 (관리자) */
+  .active-card { background:#f8faf9; border:1px solid #d5e3d9; border-radius:14px; padding:14px 16px; margin-bottom:14px; }
+  .active-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .active-title { font-size:14px; font-weight:800; color:#0a3a1e; }
+  .active-sub { font-size:11.5px; color:#666; margin-top:3px; line-height:1.4; }
+  .active-more { background:#fff; border:1px solid #c8d5cc; color:#0a3a1e; font-size:12px; font-weight:700; padding:6px 10px; border-radius:8px; cursor:pointer; white-space:nowrap; }
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:10px 2px; border-bottom:1px solid #eef0f3; }
+  .toggle-row:first-child { padding-top:14px; }
+  .toggle-row:last-child { border-bottom:none; }
+  .toggle-row .tr-name { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
+  .toggle-row .tr-icon { width:32px; height:32px; background:#e6f4ec; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .toggle-row .tr-info { min-width:0; }
+  .toggle-row .tr-n { font-size:13px; font-weight:700; color:#1a1a1a; }
+  .toggle-row .tr-d { font-size:11px; color:#888; margin-top:2px; }
+  .switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
+  .switch input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; inset:0; background:#ccc; border-radius:24px; cursor:pointer; transition:.2s; }
+  .slider:before { content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .switch input:checked + .slider { background:#1f6b3a; }
+  .switch input:checked + .slider:before { transform:translateX(20px); }
   .training-icon { width:42px; height:42px; border-radius:10px; background:#eef0f3; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
   .training-card.selected .training-icon { background:#1f6b3a; color:#fff; }
   .training-info { flex:1; min-width:0; }
@@ -378,6 +398,21 @@
         </div>
       </div>
 
+      <div class="active-card">
+        <div class="active-head">
+          <div>
+            <div class="active-title">📋 교육 메뉴 관리</div>
+            <div class="active-sub">각 교육의 서명 활성화 여부를 관리합니다. 저장 시 모든 폰에 반영됩니다.</div>
+          </div>
+          <button class="active-more" onclick="toggleActiveCard()" id="activeMoreBtn">펼치기 ▾</button>
+        </div>
+        <div id="activeBody" style="display:none;">
+          <div id="activeToggles"></div>
+          <button class="modal-btn" id="activeSaveBtn" style="margin-top:12px;" onclick="saveActiveToServer()">💾 저장 (모든 폰에 반영)</button>
+          <div id="activeSaveStatus" style="text-align:center; font-size:12px; margin-top:6px; color:#888;"></div>
+        </div>
+      </div>
+
       <div style="display:flex; gap:8px; margin-bottom:14px;">
         <select class="search-box training-select-admin" id="adminTrainingSelect" onchange="renderAdmin()" style="flex:2; margin-bottom:0;"></select>
         <input type="date" class="search-box" id="adminDateSelect" onchange="renderAdmin()" style="flex:1; margin-bottom:0;">
@@ -505,9 +540,20 @@ const TRAININGS = [
   { id:'mandatory',     icon:'📋', name:'법정의무교육',              desc:'개인정보보호·성희롱·괴롭힘·장애인 인식개선 등' },
   { id:'special',       icon:'⚠️', name:'특별교육',                  desc:'유해·위험작업 종사자 별도 안전교육' },
   { id:'adhoc',         icon:'💡', name:'수시교육',                  desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' },
-  // 아래 항목은 동의 기간 종료 후 비활성화. 재활용 시 name/desc를 바꾸고 disabled:false로 변경.
-  { id:'agreement_v9',  icon:'✍️', name:'취업규칙 9차 개정 동의',    desc:'동의 기간 종료',  disabled:true }
+  { id:'agreement_v9',  icon:'✍️', name:'취업규칙 9차 개정 동의',    desc:'동의서' }
 ];
+// ============ 교육 활성화 상태 (관리자가 시트에서 토글) ============
+// 기본값: 각 교육 활성화 여부. 서버(구글시트)에서 로드되면 덮어씀.
+const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, adhoc:true, agreement_v9:false };
+let activeStates = Object.assign({}, DEFAULT_ACTIVE);
+const DISABLED_DESC = '서명 기간이 아닙니다';
+function loadActiveCache() {
+  try { const s = JSON.parse(localStorage.getItem('edu_active_v1') || 'null'); if (s && typeof s === 'object') Object.assign(activeStates, s); } catch(e){}
+}
+function saveActiveCache() {
+  try { localStorage.setItem('edu_active_v1', JSON.stringify(activeStates)); } catch(e){}
+}
+loadActiveCache();
 const NAME_TO_ID = {};
 TRAININGS.forEach(t => NAME_TO_ID[t.name] = t.id);
 
@@ -613,16 +659,7 @@ function init() {
   const days = ['일','월','화','수','목','금','토'];
   document.getElementById('dateLabel').textContent = `📅 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
 
-  document.getElementById('trainingList').innerHTML = TRAININGS.map(t => `
-    <div class="training-card${t.disabled ? ' disabled' : ''}" data-id="${t.id}"${t.disabled ? '' : ` onclick="selectTraining('${t.id}')"`}>
-      <div class="training-icon">${t.icon}</div>
-      <div class="training-info">
-        <div class="training-name">${t.name}</div>
-        <div class="training-desc">${t.desc}</div>
-      </div>
-      <div class="chev">›</div>
-    </div>
-  `).join('');
+  renderTrainingList();
 
   const dept = document.getElementById('deptSelect');
   ORG_ORDER.forEach(d => {
@@ -646,6 +683,9 @@ function init() {
   if (isGsConfigured()) {
     localStorage.removeItem(STORAGE_KEY);
     pullRemote(true);
+    // 교육 활성화 상태 최초 로드 + 10초마다 폴링
+    pullActiveStates();
+    setInterval(pullActiveStates, 10000);
   } else {
     console.warn('GS_URL이 설정되지 않았습니다.');
   }
@@ -842,6 +882,95 @@ function resetFlow() {
   clearSig(); updateUI();
 }
 
+// ============ 교육 카드 렌더링 (활성/비활성 반영) ============
+function renderTrainingList() {
+  const el = document.getElementById('trainingList');
+  if (!el) return;
+  el.innerHTML = TRAININGS.map(t => {
+    const off = !activeStates[t.id];
+    const desc = off ? DISABLED_DESC : t.desc;
+    return `
+      <div class="training-card${off ? ' disabled' : ''}" data-id="${t.id}"${off ? '' : ` onclick="selectTraining('${t.id}')"`}>
+        <div class="training-icon">${t.icon}</div>
+        <div class="training-info">
+          <div class="training-name">${t.name}</div>
+          <div class="training-desc">${desc}</div>
+        </div>
+        <div class="chev">›</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============ 교육 활성화 서버 통신 ============
+async function pullActiveStates() {
+  if (!isGsConfigured()) return;
+  try {
+    const res = await fetch(GS_URL + '?action=getactive', { method:'GET' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.ok && data.active && typeof data.active === 'object') {
+      const changed = JSON.stringify(activeStates) !== JSON.stringify(Object.assign({}, activeStates, data.active));
+      Object.assign(activeStates, data.active);
+      saveActiveCache();
+      if (changed) {
+        renderTrainingList();
+        if (isAdmin) renderActiveToggles();
+      }
+    }
+  } catch(e) { console.warn('active pull failed', e); }
+}
+async function pushActiveStates() {
+  if (!isGsConfigured()) throw new Error('시트 미연결');
+  const res = await fetch(GS_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'setactive', active: activeStates })
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || '저장 실패');
+  return data;
+}
+function renderActiveToggles() {
+  const el = document.getElementById('activeToggles');
+  if (!el) return;
+  el.innerHTML = TRAININGS.map(t => `
+    <div class="toggle-row">
+      <div class="tr-name">
+        <div class="tr-icon">${t.icon}</div>
+        <div class="tr-info">
+          <div class="tr-n">${t.name}</div>
+          <div class="tr-d">${activeStates[t.id] ? '✓ 활성 · 서명 가능' : '· 비활성'}</div>
+        </div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" ${activeStates[t.id] ? 'checked' : ''} onchange="toggleActive('${t.id}', this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  `).join('');
+}
+function toggleActive(id, on) {
+  activeStates[id] = !!on;
+  saveActiveCache();
+  renderActiveToggles();
+  renderTrainingList();
+}
+async function saveActiveToServer() {
+  const btn = document.getElementById('activeSaveBtn');
+  const status = document.getElementById('activeSaveStatus');
+  if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+  try {
+    await pushActiveStates();
+    if (status) { status.textContent = '✓ 저장됨 · ' + new Date().toLocaleTimeString('ko-KR'); status.style.color = '#1f6b3a'; }
+  } catch(e) {
+    if (status) { status.textContent = '✕ 저장 실패: ' + (e.message || e); status.style.color = '#c62828'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 저장 (모든 폰에 반영)'; }
+  }
+}
+
 // ============ Google Sheets 통신 ============
 async function pushToSheet(record) {
   const res = await fetch(GS_URL, {
@@ -949,6 +1078,15 @@ function verifyPw() {
   }
 }
 function lockAdmin() { toggleAdmin(false); }
+function toggleActiveCard() {
+  const body = document.getElementById('activeBody');
+  const btn = document.getElementById('activeMoreBtn');
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  btn.textContent = open ? '접기 ▴' : '펼치기 ▾';
+  if (open) renderActiveToggles();
+}
 function toggleAdmin(on) {
   isAdmin = on;
   document.getElementById('userView').style.display = isAdmin ? 'none' : '';
@@ -958,6 +1096,7 @@ function toggleAdmin(on) {
     updateConnUI(syncOk, syncOk ? '연결됨' : '연결 확인 중');
     renderAdmin();
     if (isGsConfigured() && Date.now() - lastSyncAt > 30000) pullRemote(true);
+    if (isGsConfigured()) pullActiveStates();
   }
 }
 
