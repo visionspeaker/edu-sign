@@ -21,6 +21,7 @@
   // URL 파라미터 ?gs=... 가 우선, 없으면 아래 기본값 사용
   const _params = new URLSearchParams(location.search);
   const _paramGs = _params.get('gs');
+  const _paramT = (_params.get('t') || '').trim();  // 딥링크: 교육 ID로 자동 진입
   const _DEFAULT_GS = ''; // 코드 수정 없이도 동작합니다 (아래 최초 설정 화면 사용)
   const GS_URL = (_paramGs && _paramGs.startsWith('https://script.google.com/'))
     ? _paramGs
@@ -65,6 +66,9 @@
   .toggle-row .tr-info { min-width:0; }
   .toggle-row .tr-n { font-size:13px; font-weight:700; color:#1a1a1a; }
   .toggle-row .tr-d { font-size:11px; color:#888; margin-top:2px; }
+  .toggle-row .tr-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .toggle-row .tr-link-btn { width:32px; height:32px; border:1px solid #c8d5cc; background:#fff; border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; padding:0; transition:.15s; }
+  .toggle-row .tr-link-btn:hover { background:#f3f9f5; }
   .switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
   .switch input { opacity:0; width:0; height:0; }
   .slider { position:absolute; inset:0; background:#ccc; border-radius:24px; cursor:pointer; transition:.2s; }
@@ -639,6 +643,8 @@ function makeKey(training, dept, name, dateKey) {
 }
 
 let step = 1, selectedTraining = null, selectedDept = null, selectedEmp = null;
+// 딥링크 진입 여부(교육이 URL로 고정됨). 뒤로가기로 교육 선택 화면으로 못 나감.
+const isDeepLink = !!(_paramT && TRAININGS.find(x => x.id === _paramT));
 let selectedAgreement = null;
 let isAdmin = false, adminFilter = 'all';
 let lastSyncAt = 0, syncOk = false;
@@ -677,18 +683,51 @@ function init() {
   });
 
   setupCanvas();
-  updateUI();
+
+  // 딥링크(?t=xxx)로 들어왔으면 교육 자동 선택 후 2단계로 진입
+  if (isDeepLink) {
+    // 서버에서 활성 상태 먼저 반영해서 비활성인지 확인
+    const applyDeepLink = () => {
+      if (!activeStates[_paramT]) {
+        step = 1;
+        updateUI();
+        showDeepLinkBlocked();
+      } else {
+        selectedTraining = _paramT;
+        step = 2;
+        updateUI();
+      }
+    };
+    if (isGsConfigured()) {
+      pullActiveStates().finally(applyDeepLink);
+    } else {
+      applyDeepLink();
+    }
+  } else {
+    updateUI();
+  }
 
   // 시작 시 원격에서 기록 동기화 (로컬은 항상 깨끗하게 시트와 일치시킴)
   if (isGsConfigured()) {
     localStorage.removeItem(STORAGE_KEY);
     pullRemote(true);
     // 교육 활성화 상태 최초 로드 + 10초마다 폴링
-    pullActiveStates();
+    if (!isDeepLink) pullActiveStates();
     setInterval(pullActiveStates, 10000);
   } else {
     console.warn('GS_URL이 설정되지 않았습니다.');
   }
+}
+
+function showDeepLinkBlocked() {
+  const t = TRAININGS.find(x => x.id === _paramT);
+  const name = t ? t.name : '해당 교육';
+  const modal = document.getElementById('dupModal');
+  if (!modal) return;
+  document.getElementById('dupBody').innerHTML =
+    `<b style="color:#c62828;">${name}</b><br>서명 기간이 아닙니다.<br>` +
+    `<span style="color:#888; font-size:12px;">관리자에게 문의해 주세요.</span>`;
+  modal.classList.add('show');
 }
 
 function selectTraining(id) {
@@ -753,7 +792,11 @@ async function goNext() {
   else if (step === 3) { submitSig(); }
 }
 
-function goBack() { if (step > 1) { step--; updateUI(); } }
+function goBack() {
+  // 딥링크로 진입한 경우 교육 선택 화면(step 1)으로 못 나가게 차단
+  const minStep = isDeepLink ? 2 : 1;
+  if (step > minStep) { step--; updateUI(); }
+}
 
 function updateUI() {
   document.getElementById('step1').style.display = step === 1 ? '' : 'none';
@@ -763,8 +806,9 @@ function updateUI() {
   document.getElementById('p1').classList.toggle('active', step >= 1);
   document.getElementById('p2').classList.toggle('active', step >= 2);
   document.getElementById('p3').classList.toggle('active', step >= 3);
-  document.getElementById('backBtn').style.visibility = step === 1 ? 'hidden' : '';
-  document.getElementById('prevBtn').style.display = step === 1 ? 'none' : '';
+  const minStep = isDeepLink ? 2 : 1;
+  document.getElementById('backBtn').style.visibility = step <= minStep ? 'hidden' : '';
+  document.getElementById('prevBtn').style.display = step <= minStep ? 'none' : '';
 
   const nextBtn = document.getElementById('nextBtn');
   if (step === 1) { nextBtn.textContent = '다음 단계로'; nextBtn.disabled = !selectedTraining; }
@@ -872,6 +916,15 @@ async function submitSig() {
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function resetFlow() {
+  // 딥링크로 진입한 경우 교육은 그대로 두고 2단계로 되돌림
+  if (isDeepLink && activeStates[_paramT]) {
+    step = 2; selectedDept = null; selectedEmp = null;
+    document.getElementById('deptSelect').value = '';
+    document.getElementById('rankSelect').value = '';
+    document.getElementById('nameInput').value = '';
+    clearSig(); updateUI();
+    return;
+  }
   step = 1; selectedTraining = null; selectedDept = null; selectedEmp = null;
   selectedAgreement = null;
   document.querySelectorAll('.training-card').forEach(c => c.classList.remove('selected'));
@@ -944,12 +997,45 @@ function renderActiveToggles() {
           <div class="tr-d">${activeStates[t.id] ? '✓ 활성 · 서명 가능' : '· 비활성'}</div>
         </div>
       </div>
-      <label class="switch">
-        <input type="checkbox" ${activeStates[t.id] ? 'checked' : ''} onchange="toggleActive('${t.id}', this.checked)">
-        <span class="slider"></span>
-      </label>
+      <div class="tr-actions">
+        <button class="tr-link-btn" onclick="copyDeepLink('${t.id}', this)" title="딥링크 복사">🔗</button>
+        <label class="switch">
+          <input type="checkbox" ${activeStates[t.id] ? 'checked' : ''} onchange="toggleActive('${t.id}', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
   `).join('');
+}
+function buildDeepLink(id) {
+  const base = location.origin + location.pathname;
+  const p = new URLSearchParams();
+  if (_paramGs) p.set('gs', _paramGs);
+  p.set('t', id);
+  return base + '?' + p.toString();
+}
+function copyDeepLink(id, btn) {
+  const url = buildDeepLink(id);
+  const showOk = () => {
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    btn.style.background = '#1f6b3a';
+    btn.style.color = '#fff';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(showOk).catch(() => fallbackCopy(url, showOk));
+  } else {
+    fallbackCopy(url, showOk);
+  }
+}
+function fallbackCopy(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); cb && cb(); } catch(e) { alert('복사 실패:\n' + text); }
+  document.body.removeChild(ta);
 }
 function toggleActive(id, on) {
   activeStates[id] = !!on;
