@@ -543,12 +543,13 @@ const TRAININGS = [
   { id:'safety',        icon:'🦺', name:'안전보건교육',              desc:'정기 안전보건 교육 (산업안전보건법)' },
   { id:'mandatory',     icon:'📋', name:'법정의무교육',              desc:'개인정보보호·성희롱·괴롭힘·장애인 인식개선 등' },
   { id:'special',       icon:'⚠️', name:'특별교육',                  desc:'유해·위험작업 종사자 별도 안전교육' },
+  { id:'emergency',     icon:'🚨', name:'비상대응훈련',              desc:'화재·재난 등 비상 상황 대응 훈련' },
   { id:'adhoc',         icon:'💡', name:'수시교육',                  desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' },
   { id:'agreement_v9',  icon:'✍️', name:'취업규칙 9차 개정 동의',    desc:'동의서' }
 ];
 // ============ 교육 활성화 상태 (관리자가 시트에서 토글) ============
 // 기본값: 각 교육 활성화 여부. 서버(구글시트)에서 로드되면 덮어씀.
-const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, adhoc:true, agreement_v9:false };
+const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, emergency:false, adhoc:true, agreement_v9:false };
 let activeStates = Object.assign({}, DEFAULT_ACTIVE);
 const DISABLED_DESC = '서명 기간이 아닙니다';
 function loadActiveCache() {
