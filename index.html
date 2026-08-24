@@ -734,6 +734,18 @@ function showDeepLinkBlocked() {
 }
 
 function selectTraining(id) {
+  // 방어 로직: 서버에서 비활성 상태로 확인된 교육은 진입 차단
+  if (!activeStates[id]) {
+    const t = TRAININGS.find(x => x.id === id);
+    const name = t ? t.name : '해당 교육';
+    document.getElementById('dupBody').innerHTML =
+      `<b style="color:#c62828;">${name}</b><br>서명 기간이 아닙니다.<br>` +
+      `<span style="color:#888; font-size:12px;">관리자에게 문의해 주세요.</span>`;
+    document.getElementById('dupModal').classList.add('show');
+    // 최신 상태 즉시 재조회
+    if (isGsConfigured()) pullActiveStates();
+    return;
+  }
   selectedTraining = id;
   document.querySelectorAll('.training-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
   document.getElementById('nextBtn').disabled = false;
@@ -877,6 +889,17 @@ async function submitSig() {
     document.getElementById('setupModal').classList.add('show');
     return;
   }
+  // 방어 로직: 최신 활성 상태 재확인 (제출 시점에도 비활성이면 차단)
+  try { await pullActiveStates(); } catch(e) {}
+  if (!activeStates[selectedTraining]) {
+    const t = TRAININGS.find(x => x.id === selectedTraining);
+    const name = t ? t.name : '해당 교육';
+    document.getElementById('dupBody').innerHTML =
+      `<b style="color:#c62828;">${name}</b><br>서명 기간이 종료되었습니다.<br>` +
+      `<span style="color:#888; font-size:12px;">관리자에게 문의해 주세요.</span>`;
+    document.getElementById('dupModal').classList.add('show');
+    return;
+  }
   const btn = document.getElementById('nextBtn');
   btn.disabled = true; btn.textContent = '제출 중...';
 
@@ -912,6 +935,14 @@ async function submitSig() {
         `<br><span style="color:#1f6b3a; font-size:12px; margin-top:6px; display:inline-block;">📅 내일 다시 서명하실 수 있습니다.</span>`;
       document.getElementById('dupModal').classList.add('show');
       btn.disabled = false; btn.textContent = '제출하기';
+    } else if (e.code === 'inactive') {
+      document.getElementById('dupBody').innerHTML =
+        `<b style="color:#c62828;">${t.name}</b><br>서명 기간이 종료되었습니다.<br>` +
+        `<span style="color:#888; font-size:12px;">관리자에게 문의해 주세요.</span>`;
+      document.getElementById('dupModal').classList.add('show');
+      btn.disabled = false; btn.textContent = '제출하기';
+      // 로컬 활성 상태도 즉시 갱신
+      try { await pullActiveStates(); } catch(_e) {}
     } else {
       alert('서명 저장에 실패했습니다.\n네트워크를 확인하고 다시 시도해 주세요.\n\n' + (e.message || ''));
       btn.disabled = false; btn.textContent = '제출하기';
@@ -1070,6 +1101,7 @@ async function pushToSheet(record) {
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
       atStr: record.atStr, atDate: record.atDate,
+      trainingId: record.training,        // 서버 활성 상태 재검증용
       trainingName: record.trainingName,
       dept: record.dept, rank: record.rank, name: record.name,
       img: record.img, userAgent: navigator.userAgent
