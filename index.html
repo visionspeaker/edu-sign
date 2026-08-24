@@ -710,10 +710,10 @@ function init() {
     updateUI();
   }
 
-  // 시작 시 원격에서 기록 동기화 (로컬은 항상 깨끗하게 시트와 일치시킴)
+  // 시작 시 원격에서 기록 동기화 (백그라운드, 로딩 배너 없이).
+  // 로컬 캐시를 유지해 앱은 즉시 사용 가능. 최종 중복 확인은 goNext(step2→step3)에서 fresh pull로 처리.
   if (isGsConfigured()) {
-    localStorage.removeItem(STORAGE_KEY);
-    pullRemote(true);
+    pullRemote(false);
     // 교육 활성화 상태 최초 로드 + 10초마다 폴링
     if (!isDeepLink) pullActiveStates();
     setInterval(pullActiveStates, 10000);
