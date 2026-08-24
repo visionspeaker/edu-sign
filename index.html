@@ -737,6 +737,8 @@ function selectTraining(id) {
   selectedTraining = id;
   document.querySelectorAll('.training-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
   document.getElementById('nextBtn').disabled = false;
+  // 카드 선택 즉시 다음 단계(이름 입력)로 이동
+  step = 2; updateUI();
 }
 
 function onInputChange() {
