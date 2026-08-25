@@ -852,6 +852,7 @@ function updateUI() {
 
 // ============ 캔버스 ============
 let ctx, drawing = false, hasDrawn = false, lastX, lastY;
+let submittingSig = false;  // 중복 제출 방지 플래그 (더블탭 방어)
 function setupCanvas() {
   const c = document.getElementById('sig');
   ctx = c.getContext('2d');
@@ -886,8 +887,15 @@ function clearSig() {
 
 async function submitSig() {
   if (!hasDrawn) return;
+  // 더블탭 방지: 이미 제출 중이면 무시 + 버튼 즉시 disable
+  if (submittingSig) return;
+  submittingSig = true;
+  const btnEarly = document.getElementById('nextBtn');
+  if (btnEarly) { btnEarly.disabled = true; btnEarly.textContent = '제출 중...'; }
   if (!isGsConfigured()) {
     document.getElementById('setupModal').classList.add('show');
+    submittingSig = false;
+    if (btnEarly) { btnEarly.disabled = false; btnEarly.textContent = '제출하기'; }
     return;
   }
   // 방어 로직: 최신 활성 상태 재확인 (제출 시점에도 비활성이면 차단)
@@ -899,10 +907,11 @@ async function submitSig() {
       `<b style="color:#c62828;">${name}</b><br>서명 기간이 종료되었습니다.<br>` +
       `<span style="color:#888; font-size:12px;">관리자에게 문의해 주세요.</span>`;
     document.getElementById('dupModal').classList.add('show');
+    submittingSig = false;
+    if (btnEarly) { btnEarly.disabled = false; btnEarly.textContent = '제출하기'; }
     return;
   }
-  const btn = document.getElementById('nextBtn');
-  btn.disabled = true; btn.textContent = '제출 중...';
+  const btn = btnEarly;
 
   const c = document.getElementById('sig');
   const dataURL = c.toDataURL('image/png');
@@ -929,7 +938,9 @@ async function submitSig() {
     document.getElementById('okBody').innerHTML =
       `[${t.name}]<br><b>${selectedEmp.rank} ${selectedEmp.name}</b>님의 서명이<br>Google Sheets에 안전하게 저장되었습니다.`;
     document.getElementById('okModal').classList.add('show');
+    submittingSig = false;
   } catch (e) {
+    submittingSig = false;
     if (e.code === 'duplicate') {
       document.getElementById('dupBody').innerHTML =
         `[${t.name}]<br><b>${selectedEmp.rank} ${selectedEmp.name}</b>님은 <b>오늘</b> 이미 서명을 완료하셨습니다.` +
