@@ -553,6 +553,7 @@ const TRAININGS = [
 // 기본값: 각 교육 활성화 여부. 서버(구글시트)에서 로드되면 덮어씀.
 const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, emergency:false, adhoc:true, agreement_v9:false };
 let activeStates = Object.assign({}, DEFAULT_ACTIVE);
+let activeDirty = false;  // 관리자가 토글을 변경했으나 아직 서버 저장 전인지 여부. 폴링이 로컬 변경을 덮어쓰지 않도록 함.
 const DISABLED_DESC = '서명 기간이 아닙니다';
 function loadActiveCache() {
   try { const s = JSON.parse(localStorage.getItem('edu_active_v1') || 'null'); if (s && typeof s === 'object') Object.assign(activeStates, s); } catch(e){}
@@ -995,11 +996,15 @@ function renderTrainingList() {
 // ============ 교육 활성화 서버 통신 ============
 async function pullActiveStates() {
   if (!isGsConfigured()) return;
+  // 저장 안 된 로컬 변경이 있으면 서버 값으로 덮어쓰지 않음 (관리자가 토글 중일 수 있음)
+  if (activeDirty) return;
   try {
     const res = await fetch(GS_URL + '?action=getactive', { method:'GET' });
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.ok && data.active && typeof data.active === 'object') {
+      // 폴링 중 사용자가 토글을 만졌을 수 있으니 다시 확인
+      if (activeDirty) return;
       const changed = JSON.stringify(activeStates) !== JSON.stringify(Object.assign({}, activeStates, data.active));
       Object.assign(activeStates, data.active);
       saveActiveCache();
@@ -1076,21 +1081,28 @@ function fallbackCopy(text, cb) {
 }
 function toggleActive(id, on) {
   activeStates[id] = !!on;
+  activeDirty = true;  // 저장 전까지 폴링이 덮어쓰지 못하도록
   saveActiveCache();
   renderActiveToggles();
   renderTrainingList();
+  // 저장 버튼에 시각 표시
+  const btn = document.getElementById('activeSaveBtn');
+  if (btn) { btn.textContent = '💾 저장 필요! (변경사항 있음)'; btn.style.background = '#e65100'; }
+  const status = document.getElementById('activeSaveStatus');
+  if (status) { status.textContent = '⚠ 아직 저장되지 않았습니다. 저장 버튼을 눌러주세요.'; status.style.color = '#e65100'; }
 }
 async function saveActiveToServer() {
   const btn = document.getElementById('activeSaveBtn');
   const status = document.getElementById('activeSaveStatus');
-  if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+  if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; btn.style.background = ''; }
   try {
     await pushActiveStates();
+    activeDirty = false;  // 서버 저장 완료 → 폴링 재개
     if (status) { status.textContent = '✓ 저장됨 · ' + new Date().toLocaleTimeString('ko-KR'); status.style.color = '#1f6b3a'; }
   } catch(e) {
     if (status) { status.textContent = '✕ 저장 실패: ' + (e.message || e); status.style.color = '#c62828'; }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '💾 저장 (모든 폰에 반영)'; }
+    if (btn) { btn.disabled = false; btn.textContent = '💾 저장 (모든 폰에 반영)'; btn.style.background = ''; }
   }
 }
 
