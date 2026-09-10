@@ -53,6 +53,11 @@
   .training-card.disabled .chev { display:none; }
   .training-card.disabled .training-desc { color:#c62828; font-weight:600; }
   .training-badge-live { display:inline-block; background:#1f6b3a; color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:8px; margin-left:6px; vertical-align:middle; letter-spacing:0.3px; }
+  /* 활성/비활성 구분 헤딩 */
+  .section-heading { font-size:12px; font-weight:800; padding:14px 4px 8px; letter-spacing:0.3px; }
+  .section-heading-active { color:#0a3a1e; }
+  .section-heading-inactive { color:#999; border-top:1px solid #e3e6ea; margin-top:6px; padding-top:16px; }
+  .section-heading:first-child { padding-top:4px; }
   /* 교육 메뉴 관리 (관리자) */
   .active-card { background:#f8faf9; border:1px solid #d5e3d9; border-radius:14px; padding:14px 16px; margin-bottom:14px; }
   .active-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
@@ -1013,25 +1018,38 @@ function resetFlow() {
   clearSig(); updateUI();
 }
 
-// ============ 교육 카드 렌더링 (활성/비활성 반영) ============
+// ============ 교육 카드 렌더링 (활성 항목 자동 상단 노출) ============
+function renderCard(t) {
+  const off = !activeStates[t.id];
+  const desc = off ? DISABLED_DESC : t.desc;
+  const badge = off ? '' : '<span class="training-badge-live">진행중</span>';
+  return `
+    <div class="training-card${off ? ' disabled' : ''}" data-id="${t.id}"${off ? '' : ` onclick="selectTraining('${t.id}')"`}>
+      <div class="training-icon">${t.icon}</div>
+      <div class="training-info">
+        <div class="training-name">${t.name}${badge}</div>
+        <div class="training-desc">${desc}</div>
+      </div>
+      <div class="chev">›</div>
+    </div>
+  `;
+}
 function renderTrainingList() {
   const el = document.getElementById('trainingList');
   if (!el) return;
-  el.innerHTML = TRAININGS.map(t => {
-    const off = !activeStates[t.id];
-    const desc = off ? DISABLED_DESC : t.desc;
-    const badge = off ? '' : '<span class="training-badge-live">진행중</span>';
-    return `
-      <div class="training-card${off ? ' disabled' : ''}" data-id="${t.id}"${off ? '' : ` onclick="selectTraining('${t.id}')"`}>
-        <div class="training-icon">${t.icon}</div>
-        <div class="training-info">
-          <div class="training-name">${t.name}${badge}</div>
-          <div class="training-desc">${desc}</div>
-        </div>
-        <div class="chev">›</div>
-      </div>
-    `;
-  }).join('');
+  // TRAININGS 원본 순서를 유지하되, 활성 항목을 상단에 모아서 표시
+  const active = TRAININGS.filter(t => activeStates[t.id]);
+  const inactive = TRAININGS.filter(t => !activeStates[t.id]);
+  let html = '';
+  if (active.length > 0) {
+    html += '<div class="section-heading section-heading-active">🟢 지금 서명 가능한 항목</div>';
+    html += active.map(renderCard).join('');
+  }
+  if (inactive.length > 0) {
+    if (active.length > 0) html += '<div class="section-heading section-heading-inactive">서명 기간이 아닌 항목</div>';
+    html += inactive.map(renderCard).join('');
+  }
+  el.innerHTML = html;
 }
 
 // ============ 교육 활성화 서버 통신 ============
