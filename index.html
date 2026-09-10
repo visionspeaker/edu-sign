@@ -1037,19 +1037,10 @@ function renderCard(t) {
 function renderTrainingList() {
   const el = document.getElementById('trainingList');
   if (!el) return;
-  // TRAININGS 원본 순서를 유지하되, 활성 항목을 상단에 모아서 표시
+  // TRAININGS 원본 순서를 유지하되, 활성 항목을 상단에 모아서 표시 (헤딩 없이)
   const active = TRAININGS.filter(t => activeStates[t.id]);
   const inactive = TRAININGS.filter(t => !activeStates[t.id]);
-  let html = '';
-  if (active.length > 0) {
-    html += '<div class="section-heading section-heading-active">🟢 지금 서명 가능한 항목</div>';
-    html += active.map(renderCard).join('');
-  }
-  if (inactive.length > 0) {
-    if (active.length > 0) html += '<div class="section-heading section-heading-inactive">서명 기간이 아닌 항목</div>';
-    html += inactive.map(renderCard).join('');
-  }
-  el.innerHTML = html;
+  el.innerHTML = [...active, ...inactive].map(renderCard).join('');
 }
 
 // ============ 교육 활성화 서버 통신 ============
