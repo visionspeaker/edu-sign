@@ -171,6 +171,55 @@
   .print-select { width:100%; padding:12px 14px; border:1px solid #ddd; border-radius:10px; font-family:inherit; font-size:14px; background:#fff; -webkit-appearance:none; appearance:none; }
   /* Print preview overlay */
   #printPreview { display:none; position:fixed; inset:0; background:#f5f6f8; z-index:2000; overflow:auto; }
+  /* 동의서 PDF 미리보기 */
+  #consentPdfPreview { display:none; position:fixed; inset:0; background:#f5f6f8; z-index:2000; overflow:auto; }
+  #consentPdfContent { padding:20px 0; }
+  .consent-doc { background:#fff; border:1px solid #e3e6ea; box-shadow:0 4px 16px rgba(0,0,0,.06); padding:22mm 18mm 18mm 18mm; margin:0 auto 20px; max-width:210mm; min-height:297mm; font-size:12px; line-height:1.65; color:#111; box-sizing:border-box; }
+  .consent-doc .p-header { display:flex; justify-content:space-between; align-items:baseline; padding-bottom:10px; border-bottom:2px solid #1f6b3a; margin-bottom:20px; }
+  .consent-doc .company { font-weight:800; font-size:14px; color:#0a3a1e; }
+  .consent-doc .doc-meta { font-size:10.5px; color:#666; }
+  .consent-doc h1 { text-align:center; font-size:20px; font-weight:800; margin:14px 0 4px; letter-spacing:-0.5px; }
+  .consent-doc .h-sub { text-align:center; font-size:11.5px; color:#666; margin-bottom:22px; }
+  .consent-doc .lead { font-size:12px; color:#333; margin-bottom:14px; padding:10px 12px; background:#f7f9fb; border-left:3px solid #1f6b3a; border-radius:4px; }
+  .consent-doc .item { margin:9px 0; padding-left:20px; text-indent:-20px; }
+  .consent-doc .item .lbl { display:inline-block; min-width:110px; font-weight:700; color:#0a3a1e; text-indent:0; }
+  .consent-doc .item b { color:#111; }
+  .consent-doc .consent-choice { margin-top:22px; padding:16px; background:#f8faf9; border:1.5px solid #c8e2d2; border-radius:8px; }
+  .consent-doc .consent-choice .q { font-size:13px; font-weight:800; text-align:center; color:#0a3a1e; margin-bottom:14px; }
+  .consent-doc .cb-row { display:flex; justify-content:center; gap:36px; font-size:13px; }
+  .consent-doc .cb-row .cb { display:flex; align-items:center; gap:8px; font-weight:700; }
+  .consent-doc .cb-row .box { display:inline-block; width:16px; height:16px; border:1.5px solid #333; text-align:center; line-height:14px; font-weight:800; font-size:12px; }
+  .consent-doc .cb-row .cb.on .box { background:#1f6b3a; color:#fff; border-color:#0a3a1e; }
+  .consent-doc .cb-row .cb.on { color:#0a3a1e; }
+  .consent-doc .cb-row .cb.off { color:#999; }
+  .consent-doc .cb-row .cb.off .box { background:#fff; }
+  .consent-doc .sign-block { margin-top:32px; }
+  .consent-doc .sign-title { font-size:12.5px; color:#333; margin-bottom:10px; text-align:right; }
+  .consent-doc .sign-title b { color:#0a3a1e; }
+  .consent-doc .sign-fields { display:grid; grid-template-columns:80px 1fr; gap:8px 12px; font-size:12.5px; padding:14px 18px; border:1px solid #d5dde3; border-radius:6px; background:#fdfdfd; }
+  .consent-doc .sign-fields .k { font-weight:700; color:#555; padding:6px 0; }
+  .consent-doc .sign-fields .v { padding:6px 0; border-bottom:1px dotted #d5dde3; }
+  .consent-doc .sign-fields .sig-row { display:flex; align-items:center; gap:20px; padding-top:6px; }
+  .consent-doc .sign-fields .sig-row .sig-img { border:1px dashed #ccc; padding:6px; border-radius:4px; min-width:140px; min-height:44px; display:flex; align-items:center; justify-content:center; background:#fff; }
+  .consent-doc .sign-fields .sig-row .sig-img img { max-width:200px; max-height:60px; display:block; }
+  .consent-doc .foot { margin-top:20px; padding-top:10px; border-top:1px solid #e3e6ea; font-size:10px; color:#888; text-align:center; }
+  /* 동의서 PDF 목록 */
+  .cpdf-row { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid #f0f2f5; font-size:12.5px; }
+  .cpdf-row:last-child { border-bottom:none; }
+  .cpdf-row input[type=checkbox] { width:15px; height:15px; margin:0; }
+  .cpdf-row .name { flex:1; font-weight:600; color:#333; }
+  .cpdf-row .status { font-size:11px; font-weight:700; padding:2px 8px; border-radius:8px; }
+  .cpdf-row .status.agree { background:#e6f4ec; color:#1f6b3a; }
+  .cpdf-row .status.disagree { background:#fdecec; color:#c62828; }
+  .cpdf-row .btn-mini { padding:4px 10px; font-size:11.5px; background:#fff; border:1px solid #d5e3d9; color:#1f6b3a; border-radius:6px; cursor:pointer; font-weight:700; }
+  .cpdf-row.unsigned { color:#c0c8d0; }
+  .cpdf-row.unsigned .name { color:#c0c8d0; }
+  .cpdf-row.unsigned input[type=checkbox] { visibility:hidden; }
+  @media print {
+    #consentPdfContent { padding:0 !important; }
+    .consent-doc { box-shadow:none !important; border:none !important; margin:0 !important; padding:15mm 12mm !important; max-width:none !important; width:100% !important; min-height:auto !important; page-break-after:always; }
+    .consent-doc:last-child { page-break-after:auto; }
+  }
   .pp-header { position:sticky; top:0; background:#fff; border-bottom:1px solid #e3e6ea; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; z-index:1; }
   .pp-btn-secondary { padding:8px 16px; background:#fff; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:600; font-size:13px; }
   .pp-btn-primary { padding:8px 16px; background:#1f6b3a; color:#fff; border:none; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:700; font-size:13px; }
@@ -212,8 +261,8 @@
     html, body { margin:0 !important; padding:0 !important; background:#fff !important; width:100% !important; }
     body * { visibility:hidden !important; }
     #app { max-width:none !important; width:100% !important; margin:0 !important; padding:0 !important; position:static !important; }
-    #printPreview, #printPreview * { visibility:visible !important; }
-    #printPreview { display:block !important; position:absolute !important; top:0 !important; left:0 !important; right:0 !important; width:100% !important; background:#fff !important; overflow:visible !important; }
+    #printPreview, #printPreview *, #consentPdfPreview, #consentPdfPreview * { visibility:visible !important; }
+    #printPreview, #consentPdfPreview { display:block !important; position:absolute !important; top:0 !important; left:0 !important; right:0 !important; width:100% !important; background:#fff !important; overflow:visible !important; }
     .pp-header { display:none !important; }
     .print-content { box-shadow:none !important; margin:0 !important; padding:6mm 5mm !important; max-width:none !important; width:100% !important; box-sizing:border-box !important; }
     .print-tables { display:grid !important; grid-template-columns:1fr 1fr !important; gap:3mm !important; width:100% !important; margin:0 !important; }
@@ -451,6 +500,16 @@
         <button onclick="lockAdmin()">🔒 잠금</button>
       </div>
 
+      <div id="consentPdfCard" style="display:none; background:#f8faf9; border:1.5px solid #c8e2d2; border-radius:12px; padding:14px 16px; margin-bottom:14px;">
+        <div style="font-size:14px; font-weight:800; color:#0a3a1e; margin-bottom:6px;" id="consentPdfTitle">📄 동의서 PDF 다운</div>
+        <div style="font-size:11.5px; color:#666; margin-bottom:10px;">동의 여부·서명이 포함된 개인별 동의서를 PDF로 다운받습니다. (브라우저 인쇄 → PDF로 저장)</div>
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <button class="btn" style="flex:1; padding:10px 12px; background:#1f6b3a; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;" onclick="downloadConsentPdfAll()">📄 전체 다운 (동의+거부 서명자)</button>
+          <button class="btn" style="flex:1; padding:10px 12px; background:#fff; color:#1f6b3a; border:1.5px solid #c8e2d2; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;" onclick="downloadConsentPdfSelected()">📋 선택자만 다운</button>
+        </div>
+        <div id="consentPdfList" style="max-height:260px; overflow-y:auto; background:#fff; border:1px solid #e3e6ea; border-radius:8px;"></div>
+      </div>
+
       <div id="adminBody"></div>
     </div>
   </div>
@@ -541,6 +600,18 @@
     <div id="printContent" class="print-content"></div>
   </div>
 
+  <!-- CONSENT PDF PREVIEW OVERLAY -->
+  <div id="consentPdfPreview">
+    <div class="pp-header">
+      <div style="font-weight:800; font-size:15px;">📄 동의서 PDF 미리보기</div>
+      <div style="display:flex; gap:8px;">
+        <button class="pp-btn-secondary" onclick="closeConsentPdfPreview()">닫기</button>
+        <button class="pp-btn-primary" onclick="doConsentPdfPrint()">🖨 PDF로 저장 (인쇄)</button>
+      </div>
+    </div>
+    <div id="consentPdfContent"></div>
+  </div>
+
   <!-- MODAL: setup warning -->
   <div class="modal-bg" id="setupModal">
     <div class="modal">
@@ -560,7 +631,7 @@ const TRAININGS = [
   { id:'special',       icon:'⚠️', name:'특별교육',                  desc:'유해·위험작업 종사자 별도 안전교육' },
   { id:'emergency',     icon:'🚨', name:'비상대응훈련',              desc:'화재·재난 등 비상 상황 대응 훈련' },
   { id:'adhoc',         icon:'💡', name:'수시교육',                  desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' },
-  { id:'health_privacy', icon:'🏥', name:'임직원 건강·보건관리 개인정보 처리 동의', desc:'건강진단 사후관리 관련 동의서',
+  { id:'health_privacy', icon:'🏥', name:'임직원 건강·보건관리 개인정보 처리 동의', desc:'',
     type:'consent',
     consentHtml: `
       <div class="consent-title">임직원 건강·보건관리 관련<br>개인정보 처리 동의서</div>
@@ -1021,14 +1092,15 @@ function resetFlow() {
 // ============ 교육 카드 렌더링 (활성 항목 자동 상단 노출) ============
 function renderCard(t) {
   const off = !activeStates[t.id];
-  const desc = off ? DISABLED_DESC : t.desc;
+  const desc = off ? DISABLED_DESC : (t.desc || '');
   const badge = off ? '' : '<span class="training-badge-live">진행중</span>';
+  const descHtml = desc ? `<div class="training-desc">${desc}</div>` : '';
   return `
     <div class="training-card${off ? ' disabled' : ''}" data-id="${t.id}"${off ? '' : ` onclick="selectTraining('${t.id}')"`}>
       <div class="training-icon">${t.icon}</div>
       <div class="training-info">
         <div class="training-name">${t.name}${badge}</div>
-        <div class="training-desc">${desc}</div>
+        ${descHtml}
       </div>
       <div class="chev">›</div>
     </div>
@@ -1361,6 +1433,128 @@ function renderAdmin() {
   });
   if (!html) html = '<div class="empty-state">해당 날짜에 서명한 사람이 없습니다.</div>';
   document.getElementById('adminBody').innerHTML = html;
+  // 동의서형 교육이면 PDF 다운 카드 표시
+  refreshConsentPdfCard(tid, dateKey, allSigned);
+}
+
+// ============ 동의서 PDF 다운 ============
+function refreshConsentPdfCard(tid, dateKey, allSigned) {
+  const card = document.getElementById('consentPdfCard');
+  if (!card) return;
+  if (!isConsentTraining(tid)) { card.style.display = 'none'; return; }
+  const t = getTraining(tid);
+  card.style.display = '';
+  document.getElementById('consentPdfTitle').textContent = `📄 ${t.name} · PDF 다운`;
+  // 정렬: 부서순(ORG_ORDER) → 시간순
+  const sorted = [...allSigned].sort((a, b) => {
+    const da = ORG_ORDER.indexOf(a.dept); const db = ORG_ORDER.indexOf(b.dept);
+    const cd = (da === -1 ? 999 : da) - (db === -1 ? 999 : db);
+    if (cd !== 0) return cd;
+    return (a.atStr || '').localeCompare(b.atStr || '');
+  });
+  const listEl = document.getElementById('consentPdfList');
+  if (sorted.length === 0) {
+    listEl.innerHTML = '<div style="padding:16px; text-align:center; color:#888; font-size:12px;">해당 날짜 서명자가 없습니다.</div>';
+    return;
+  }
+  listEl.innerHTML = sorted.map(s => {
+    const m = (s.trainingName || '').match(/\(([^)]+)\)\s*$/);
+    const choice = m ? m[1] : '';
+    const badge = choice === '동의함' ? '<span class="status agree">동의함</span>' : (choice === '동의하지 않음' ? '<span class="status disagree">동의하지 않음</span>' : '');
+    const key = makeKey(s.training, s.dept, s.name, s.atDate);
+    return `<div class="cpdf-row">
+      <input type="checkbox" data-sig-key="${escapeHtml(key)}" checked>
+      <span class="name">${escapeHtml(s.dept || '')} · ${escapeHtml(s.rank || '')} ${escapeHtml(s.name || '')}</span>
+      ${badge}
+      <button class="btn-mini" onclick="downloadConsentPdfOne('${escapeHtml(key)}')">↓ 개인</button>
+    </div>`;
+  }).join('');
+}
+
+function _getConsentSigs() {
+  const tid = getCurrentTraining();
+  const dateKey = getCurrentDate();
+  const sigs = loadSigs();
+  return Object.values(sigs).filter(s => s.training === tid && s.atDate === dateKey);
+}
+
+function downloadConsentPdfAll() {
+  const sigs = _getConsentSigs();
+  if (!sigs.length) { alert('해당 날짜 서명자가 없습니다.'); return; }
+  openConsentPdfPreview(sigs);
+}
+function downloadConsentPdfSelected() {
+  const checked = Array.from(document.querySelectorAll('#consentPdfList input[type=checkbox]:checked'));
+  if (!checked.length) { alert('선택된 서명자가 없습니다.'); return; }
+  const keys = new Set(checked.map(c => c.dataset.sigKey));
+  const sigs = _getConsentSigs().filter(s => keys.has(makeKey(s.training, s.dept, s.name, s.atDate)));
+  openConsentPdfPreview(sigs);
+}
+function downloadConsentPdfOne(key) {
+  const sigs = _getConsentSigs();
+  const one = sigs.find(s => makeKey(s.training, s.dept, s.name, s.atDate) === key);
+  if (!one) { alert('해당 서명을 찾을 수 없습니다.'); return; }
+  openConsentPdfPreview([one]);
+}
+
+function buildConsentDocHtml(sig, docNum) {
+  const t = getTraining(sig.training);
+  const dateStr = sig.atDate || '';
+  const [y, m, d] = dateStr.split('-');
+  const displayDate = y && m && d ? `${y}년 ${parseInt(m)}월 ${parseInt(d)}일` : dateStr;
+  const choiceMatch = (sig.trainingName || '').match(/\(([^)]+)\)\s*$/);
+  const choice = choiceMatch ? choiceMatch[1] : '';
+  const isAgree = choice === '동의함';
+  const isDisagree = choice === '동의하지 않음';
+  const consentHtml = t.consentHtml || '<div class="lead">동의 내용은 회사 규정 문서를 참조하십시오.</div>';
+  const printDate = new Date().toISOString().slice(0, 10);
+  const timeMatch = (sig.atStr || '').match(/(\d+:\d+:\d+)/);
+  const signTime = timeMatch ? timeMatch[1] : '';
+  return `
+    <div class="consent-doc">
+      <div class="p-header">
+        <div class="company">한양전공(주)</div>
+        <div class="doc-meta">문서번호: HP-${sig.atDate.replace(/-/g,'')}-${String(docNum).padStart(3,'0')} · 출력일: ${printDate}</div>
+      </div>
+      <h1>${escapeHtml(t.name.replace(' 동의','').trim())} 동의서</h1>
+      <div class="h-sub">전자서명 기록 자동 생성 문서</div>
+      ${consentHtml.replace(/consent-title/g,'lead-title').replace(/consent-lead/g,'lead').replace(/consent-item/g,'item').replace(/consent-lbl/g,'lbl')}
+      <div class="consent-choice">
+        <div class="q">본인은 위 내용을 확인하고, 개인정보 처리에 ${isAgree ? '동의합니다.' : isDisagree ? '동의하지 않습니다.' : '아래와 같이 표시합니다.'}</div>
+        <div class="cb-row">
+          <div class="cb ${isAgree ? 'on' : 'off'}"><span class="box">${isAgree ? '✓' : ''}</span>동의함</div>
+          <div class="cb ${isDisagree ? 'on' : 'off'}"><span class="box">${isDisagree ? '✓' : ''}</span>동의하지 않음</div>
+        </div>
+      </div>
+      <div class="sign-block">
+        <div class="sign-title"><b>${escapeHtml(displayDate)}</b></div>
+        <div class="sign-fields">
+          <div class="k">소속</div><div class="v">${escapeHtml(sig.dept || '')}</div>
+          <div class="k">직급 · 성명</div><div class="v">${escapeHtml((sig.rank || '') + ' ' + (sig.name || ''))}</div>
+          <div class="k">서명</div>
+          <div class="v sig-row">
+            <div class="sig-img">${sig.img ? `<img src="${sig.img}" alt="서명">` : '<span style="color:#c00; font-size:11px;">서명 이미지 없음</span>'}</div>
+            <span style="color:#888; font-size:11px;">(전자서명${signTime ? ' · 서명 시각: ' + signTime : ''})</span>
+          </div>
+        </div>
+      </div>
+      <div class="foot">한양전공(주) 전자서명 시스템 · 자동 생성 문서 · ${printDate}</div>
+    </div>
+  `;
+}
+
+function openConsentPdfPreview(sigs) {
+  const html = sigs.map((s, i) => buildConsentDocHtml(s, i + 1)).join('');
+  document.getElementById('consentPdfContent').innerHTML = html;
+  document.getElementById('consentPdfPreview').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+function closeConsentPdfPreview() { document.getElementById('consentPdfPreview').style.display = 'none'; }
+async function doConsentPdfPrint() {
+  // 서명 이미지 로딩 대기
+  const imgs = Array.from(document.querySelectorAll('#consentPdfContent img'));
+  await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })));
+  window.print();
 }
 
 function exportCSV() {
