@@ -150,6 +150,13 @@
   .conn-card .right { display:flex; gap:6px; }
   .conn-card button { padding:6px 10px; border:1px solid currentColor; background:transparent; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; color:inherit; font-family:inherit; }
   .sync-banner { position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#1a73e8; color:#fff; padding:8px 16px; font-size:12px; text-align:center; z-index:999; display:none; }
+  /* 동의서 내용 박스 */
+  #consentContentBox { background:#f7f9fb; border:1px solid #e3e6ea; border-radius:12px; padding:16px 14px; font-size:12.5px; line-height:1.65; color:#333; margin-bottom:16px; max-height:360px; overflow-y:auto; }
+  #consentContentBox .consent-title { font-size:15px; font-weight:800; color:#0a3a1e; margin-bottom:10px; text-align:center; line-height:1.4; }
+  #consentContentBox .consent-lead { font-size:12px; color:#555; margin-bottom:12px; text-align:center; line-height:1.5; }
+  #consentContentBox .consent-item { margin:8px 0; padding-left:16px; text-indent:-16px; }
+  #consentContentBox .consent-lbl { display:inline-block; min-width:96px; font-weight:700; color:#0a3a1e; text-indent:0; }
+  #consentContentBox .consent-item b { color:#0a3a1e; }
   .agreement-btn { flex:1; padding:16px 12px; border:2px solid #eef0f3; border-radius:12px; background:#fff; cursor:pointer; font-family:inherit; font-size:15px; font-weight:700; color:#333; transition:all .15s; }
   .agreement-btn:active { transform:scale(.98); }
   .agreement-btn.selected { background:#1f6b3a; color:#fff; border-color:#1f6b3a; }
@@ -326,7 +333,7 @@
     <div class="step-label" id="stepLabel">1 of 3 단계</div>
 
     <div id="step1">
-      <div class="step-title">메뉴를 선택하시고, 서명 해 주세요.</div>
+      <div class="step-title">서명 항목을 선택 해 주세요.</div>
       <div class="training-list" id="trainingList"></div>
     </div>
 
@@ -363,6 +370,7 @@
         <input type="text" id="nameInput" placeholder="이름을 입력해 주세요" oninput="onInputChange()" autocomplete="off">
       </div>
       <div id="agreementBlock" style="display:none; padding: 20px 16px 0;">
+        <div id="consentContentBox" style="display:none;"></div>
         <div style="font-size:14px; font-weight:700; margin-bottom:10px; color:#0a3a1e;">✍️ 동의 여부</div>
         <div style="display:flex; gap:10px;">
           <button type="button" class="agreement-btn" data-agreement="agree" onclick="selectAgreement('agree')">✓ 동의함</button>
@@ -547,11 +555,24 @@ const TRAININGS = [
   { id:'special',       icon:'⚠️', name:'특별교육',                  desc:'유해·위험작업 종사자 별도 안전교육' },
   { id:'emergency',     icon:'🚨', name:'비상대응훈련',              desc:'화재·재난 등 비상 상황 대응 훈련' },
   { id:'adhoc',         icon:'💡', name:'수시교육',                  desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' },
-  { id:'agreement_v9',  icon:'✍️', name:'취업규칙 9차 개정 동의',    desc:'동의서' }
+  { id:'health_privacy', icon:'🏥', name:'임직원 건강·보건관리 개인정보 처리 동의', desc:'건강진단 사후관리 관련 동의서',
+    type:'consent',
+    consentHtml: `
+      <div class="consent-title">임직원 건강·보건관리 관련<br>개인정보 처리 동의서</div>
+      <div class="consent-lead">산업안전보건법 제132조에 따른 건강진단 사후관리 및 건강 보호를 위해 아래와 같이 건강정보를 처리합니다.</div>
+      <div class="consent-item"><span class="consent-lbl">1. 제공받는 자</span> (주)우진산업보건연구원 (산업보건의·보건관리 간호사)</div>
+      <div class="consent-item"><span class="consent-lbl">2. 목적</span> 건강진단 사후관리(건강상담, 추적검사 안내, 업무적합성 평가, 작업환경 개선) 및 건강증진 프로그램</div>
+      <div class="consent-item"><span class="consent-lbl">3. 항목</span> 성명, 생년월일, 연락처, 건강진단 결과(검사수치·판정·유소견·의사소견)</div>
+      <div class="consent-item"><span class="consent-lbl">4. 보유기간</span> 위탁계약 종료 시까지 <b>(산업안전보건법 제164조 보존기간: 5년, 발암성 물질 취급자 30년)</b></div>
+      <div class="consent-item"><span class="consent-lbl">5. 동의 거부 권리</span> 동의를 거부하실 수 있으며, 인사·처우상 어떠한 불이익도 없습니다. 다만 산업안전보건법 제132조에 따른 <b>건강진단 결과 통보 및 사후관리 조치는 법령상 회사의 의무</b>이므로 동의 여부와 무관하게 이행됩니다. 동의하지 않으실 경우 위탁기관 소속 의료진을 통한 <b>개별 건강상담 및 건강증진 프로그램 참여만 제한</b>됩니다.</div>
+    `},
+  { id:'agreement_v9',  icon:'✍️', name:'취업규칙 9차 개정 동의',    desc:'동의서', type:'consent' }
 ];
+function getTraining(id) { return TRAININGS.find(x => x.id === id); }
+function isConsentTraining(id) { const t = getTraining(id); return !!(t && t.type === 'consent'); }
 // ============ 교육 활성화 상태 (관리자가 시트에서 토글) ============
 // 기본값: 각 교육 활성화 여부. 서버(구글시트)에서 로드되면 덮어씀.
-const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, emergency:false, adhoc:true, agreement_v9:false };
+const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, emergency:false, adhoc:true, health_privacy:false, agreement_v9:false };
 let activeStates = Object.assign({}, DEFAULT_ACTIVE);
 let activeDirty = false;  // 관리자가 토글을 변경했으나 아직 서버 저장 전인지 여부. 폴링이 로컬 변경을 덮어쓰지 않도록 함.
 const DISABLED_DESC = '서명 기간이 아닙니다';
@@ -759,7 +780,7 @@ function onInputChange() {
   const rank = document.getElementById('rankSelect').value;
   const name = document.getElementById('nameInput').value.trim();
   selectedDept = dept || null;
-  const needsAgreement = selectedTraining === 'agreement_v9';
+  const needsAgreement = isConsentTraining(selectedTraining);
   const agreementOk = !needsAgreement || !!selectedAgreement;
   if (dept && rank && name && agreementOk) {
     selectedEmp = { dept, rank, name };
@@ -836,9 +857,18 @@ function updateUI() {
     if (selectedTraining) {
       const t = TRAININGS.find(x => x.id === selectedTraining);
       document.getElementById('selectedTrainingDisplay').textContent = t.name;
-      const isAgreement = selectedTraining === 'agreement_v9';
-      document.getElementById('selectedTrainingCard').style.display = isAgreement ? 'none' : '';
-      document.getElementById('agreementBlock').style.display = isAgreement ? '' : 'none';
+      const isConsent = isConsentTraining(selectedTraining);
+      document.getElementById('selectedTrainingCard').style.display = isConsent ? 'none' : '';
+      document.getElementById('agreementBlock').style.display = isConsent ? '' : 'none';
+      // 동의서 본문 표시 (consentHtml 필드가 있는 경우)
+      const consentBox = document.getElementById('consentContentBox');
+      if (isConsent && t.consentHtml) {
+        consentBox.innerHTML = t.consentHtml;
+        consentBox.style.display = '';
+      } else {
+        consentBox.style.display = 'none';
+        consentBox.innerHTML = '';
+      }
     }
   }
   else if (step === 3) {
@@ -921,7 +951,7 @@ async function submitSig() {
   const now = new Date();
   const t = TRAININGS.find(x => x.id === selectedTraining);
   let trainingName = t.name;
-  if (selectedTraining === 'agreement_v9' && selectedAgreement) {
+  if (isConsentTraining(selectedTraining) && selectedAgreement) {
     trainingName = `${t.name} (${selectedAgreement === 'agree' ? '동의함' : '동의하지 않음'})`;
   }
   const record = {
@@ -1405,7 +1435,7 @@ async function doPrint() {
 
 function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) {
   const isAll = !trainingId || trainingId === '__all__';
-  const isAgreement = !isAll && trainingId === 'agreement_v9';
+  const isAgreement = !isAll && isConsentTraining(trainingId);  // consent 타입(취업규칙·건강정보처리) → 동의 여부 컬럼 포함
   const t = isAll ? null : TRAININGS.find(x => x.id === trainingId);
   const df = dateFrom || '';
   const dt = dateTo || df;
