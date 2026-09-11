@@ -157,11 +157,22 @@
   .sync-banner { position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#1a73e8; color:#fff; padding:8px 16px; font-size:12px; text-align:center; z-index:999; display:none; }
   /* 동의서 내용 박스 */
   #consentContentBox { background:#f7f9fb; border:1px solid #e3e6ea; border-radius:12px; padding:16px 14px; font-size:12.5px; line-height:1.65; color:#333; margin-bottom:16px; max-height:360px; overflow-y:auto; }
-  #consentContentBox .consent-title { font-size:15px; font-weight:800; color:#0a3a1e; margin-bottom:10px; text-align:center; line-height:1.4; }
-  #consentContentBox .consent-lead { font-size:12px; color:#555; margin-bottom:12px; text-align:center; line-height:1.5; }
-  #consentContentBox .consent-item { margin:8px 0; padding-left:16px; text-indent:-16px; }
-  #consentContentBox .consent-lbl { display:inline-block; min-width:96px; font-weight:700; color:#0a3a1e; text-indent:0; }
-  #consentContentBox .consent-item b { color:#0a3a1e; }
+  #consentContentBox .consent-lead { text-align:center; padding:14px 16px; background:#f7f9fb; border-radius:12px; margin-bottom:16px; font-size:12px; color:#555; line-height:1.55; border-top:2px solid #1f6b3a; }
+  #consentContentBox .consent-lead b { color:#0a3a1e; font-size:13px; display:block; margin-bottom:4px; }
+  #consentContentBox .consent-row { padding:12px 0; border-bottom:1px dashed #e3e6ea; display:grid; grid-template-columns:88px 1fr; gap:14px; align-items:flex-start; }
+  #consentContentBox .consent-row:last-child { border-bottom:none; }
+  #consentContentBox .consent-key { font-size:11px; font-weight:800; color:#1f6b3a; padding-top:2px; letter-spacing:-0.3px; display:flex; align-items:center; gap:6px; }
+  #consentContentBox .consent-key .consent-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:#1f6b3a; flex-shrink:0; }
+  #consentContentBox .consent-val { font-size:12px; color:#333; line-height:1.6; }
+  #consentContentBox .consent-val b { color:#0a3a1e; font-weight:700; }
+  #consentContentBox .consent-sub { color:#888; font-size:11px; }
+  .consent-doc .consent-row { padding:12px 0; border-bottom:1px dashed #e3e6ea; display:grid; grid-template-columns:110px 1fr; gap:14px; align-items:flex-start; }
+  .consent-doc .consent-row:last-child { border-bottom:none; }
+  .consent-doc .consent-key { font-size:11.5px; font-weight:800; color:#1f6b3a; padding-top:2px; display:flex; align-items:center; gap:6px; }
+  .consent-doc .consent-key .consent-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:#1f6b3a; flex-shrink:0; }
+  .consent-doc .consent-val { font-size:12px; color:#333; line-height:1.6; }
+  .consent-doc .consent-val b { color:#0a3a1e; font-weight:700; }
+  .consent-doc .consent-sub { color:#888; font-size:10.5px; }
   .agreement-btn { flex:1; padding:16px 12px; border:2px solid #eef0f3; border-radius:12px; background:#fff; cursor:pointer; font-family:inherit; font-size:15px; font-weight:700; color:#333; transition:all .15s; }
   .agreement-btn:active { transform:scale(.98); }
   .agreement-btn.selected { background:#1f6b3a; color:#fff; border-color:#1f6b3a; }
@@ -634,13 +645,12 @@ const TRAININGS = [
   { id:'health_privacy', icon:'🏥', name:'임직원 건강·보건관리 개인정보 처리 동의', desc:'',
     type:'consent',
     consentHtml: `
-      <div class="consent-title">임직원 건강·보건관리 관련<br>개인정보 처리 동의서</div>
-      <div class="consent-lead">산업안전보건법 제132조에 따른 건강진단 사후관리 및 건강 보호를 위해 아래와 같이 건강정보를 처리합니다.</div>
-      <div class="consent-item"><span class="consent-lbl">1. 제공받는 자</span> (주)우진산업보건연구원 (산업보건의·보건관리 간호사)</div>
-      <div class="consent-item"><span class="consent-lbl">2. 목적</span> 건강진단 사후관리(건강상담, 추적검사 안내, 업무적합성 평가, 작업환경 개선) 및 건강증진 프로그램</div>
-      <div class="consent-item"><span class="consent-lbl">3. 항목</span> 성명, 생년월일, 연락처, 건강진단 결과(검사수치·판정·유소견·의사소견)</div>
-      <div class="consent-item"><span class="consent-lbl">4. 보유기간</span> 위탁계약 종료 시까지 <b>(산업안전보건법 제164조 보존기간: 5년, 발암성 물질 취급자 30년)</b></div>
-      <div class="consent-item"><span class="consent-lbl">5. 동의 거부 권리</span> 동의를 거부하실 수 있으며, 인사·처우상 어떠한 불이익도 없습니다. 다만 산업안전보건법 제132조에 따른 <b>건강진단 결과 통보 및 사후관리 조치는 법령상 회사의 의무</b>이므로 동의 여부와 무관하게 이행됩니다. 동의하지 않으실 경우 위탁기관 소속 의료진을 통한 <b>개별 건강상담 및 건강증진 프로그램 참여만 제한</b>됩니다.</div>
+      <div class="consent-lead"><b>🏥 개인정보 처리 안내</b>산업안전보건법 제132조에 따른 건강진단 사후관리 및 건강 보호를 위해 아래와 같이 건강정보를 처리합니다.</div>
+      <div class="consent-row"><div class="consent-key"><span class="consent-dot"></span>제공받는 자</div><div class="consent-val">(주)우진산업보건연구원<br><span class="consent-sub">산업보건의·보건관리 간호사</span></div></div>
+      <div class="consent-row"><div class="consent-key"><span class="consent-dot"></span>목적</div><div class="consent-val">건강진단 사후관리(건강상담, 추적검사 안내, 업무적합성 평가, 작업환경 개선) 및 건강증진 프로그램</div></div>
+      <div class="consent-row"><div class="consent-key"><span class="consent-dot"></span>항목</div><div class="consent-val">성명, 생년월일, 연락처, 건강진단 결과<br><span class="consent-sub">(검사수치·판정·유소견·의사소견)</span></div></div>
+      <div class="consent-row"><div class="consent-key"><span class="consent-dot"></span>보유기간</div><div class="consent-val">위탁계약 종료 시까지<br><b>산업안전보건법 제164조 보존기간</b><br>일반 <b>5년</b> · 발암성 물질 취급자 <b>30년</b></div></div>
+      <div class="consent-row"><div class="consent-key"><span class="consent-dot"></span>동의 거부 권리</div><div class="consent-val">동의를 거부하실 수 있으며, <b>인사·처우상 불이익 없음</b>.<br><br>단, 산업안전보건법 제132조에 따른 <b>건강진단 결과 통보 및 사후관리 조치는 법령상 회사의 의무</b>이므로 동의 여부와 무관하게 이행됩니다. 동의하지 않으실 경우 위탁기관 소속 의료진을 통한 <b>개별 건강상담 및 건강증진 프로그램 참여가 제한</b>됩니다.</div></div>
     `},
   { id:'agreement_v9',  icon:'✍️', name:'취업규칙 9차 개정 동의',    desc:'동의서', type:'consent' }
 ];
@@ -1518,7 +1528,7 @@ function buildConsentDocHtml(sig, docNum) {
       </div>
       <h1>${escapeHtml(t.name.replace(' 동의','').trim())} 동의서</h1>
       <div class="h-sub">전자서명 기록 자동 생성 문서</div>
-      ${consentHtml.replace(/consent-title/g,'lead-title').replace(/consent-lead/g,'lead').replace(/consent-item/g,'item').replace(/consent-lbl/g,'lbl')}
+      ${consentHtml}
       <div class="consent-choice">
         <div class="q">본인은 위 내용을 확인하고, 개인정보 처리에 ${isAgree ? '동의합니다.' : isDisagree ? '동의하지 않습니다.' : '아래와 같이 표시합니다.'}</div>
         <div class="cb-row">
