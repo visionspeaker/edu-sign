@@ -640,6 +640,7 @@ const TRAININGS = [
   { id:'safety',        icon:'🦺', name:'안전보건교육',              desc:'정기 안전보건 교육 (산업안전보건법)' },
   { id:'mandatory',     icon:'📋', name:'법정의무교육',              desc:'개인정보보호·성희롱·괴롭힘·장애인 인식개선 등' },
   { id:'special',       icon:'⚠️', name:'특별교육',                  desc:'유해·위험작업 종사자 별도 안전교육' },
+  { id:'risk_assess',   icon:'🛡️', name:'위험성평가',                desc:'작업장 유해·위험요인 파악 및 평가 (산업안전보건법 제36조)' },
   { id:'emergency',     icon:'🚨', name:'비상대응훈련',              desc:'화재·재난 등 비상 상황 대응 훈련' },
   { id:'adhoc',         icon:'💡', name:'수시교육',                  desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' },
   { id:'health_privacy', icon:'🏥', name:'임직원 건강·보건관리 개인정보 처리 동의', desc:'',
@@ -658,7 +659,7 @@ function getTraining(id) { return TRAININGS.find(x => x.id === id); }
 function isConsentTraining(id) { const t = getTraining(id); return !!(t && t.type === 'consent'); }
 // ============ 교육 활성화 상태 (관리자가 시트에서 토글) ============
 // 기본값: 각 교육 활성화 여부. 서버(구글시트)에서 로드되면 덮어씀.
-const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, emergency:false, adhoc:true, health_privacy:false, agreement_v9:false };
+const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, risk_assess:false, emergency:false, adhoc:true, health_privacy:false, agreement_v9:false };
 let activeStates = Object.assign({}, DEFAULT_ACTIVE);
 let activeDirty = false;  // 관리자가 토글을 변경했으나 아직 서버 저장 전인지 여부. 폴링이 로컬 변경을 덮어쓰지 않도록 함.
 const DISABLED_DESC = '서명 기간이 아닙니다';
