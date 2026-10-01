@@ -304,6 +304,20 @@
   .setup-blocked .msg { color:#666; font-size:14px; line-height:1.6; margin-bottom: 20px; }
   .setup-blocked .small-link { color:#1a73e8; font-size:12px; cursor:pointer; text-decoration:underline; background:none; border:none; padding:8px; font-family:inherit; }
   @media (min-width: 600px) { .app { box-shadow: 0 0 30px rgba(0,0,0,.06); } }
+  /* 커스텀 드롭다운 (기본 select 목록창이 안 뜨는 브라우저 대응, 2026-10-01) */
+  .cs-wrap { position:relative; min-width:0; }
+  .cs-wrap > select.cs-native { display:none !important; }
+  .cs-btn { width:100%; margin:0 !important; background:#fff; color:#222; text-align:left; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .cs-btn:focus { outline:none; border-color:#1f6b3a; }
+  .cs-btn .cs-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cs-btn .cs-arrow { color:#888; font-size:12px; flex-shrink:0; transition:transform .15s; }
+  .cs-wrap.open .cs-arrow { transform:rotate(180deg); }
+  .cs-list { display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid #dfe3e8; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.15); padding:6px; z-index:3000; max-height:min(380px, 60vh); overflow-y:auto; text-align:left; }
+  .cs-wrap.open .cs-list { display:block; }
+  .cs-opt { padding:10px 12px 10px 32px; border-radius:8px; font-size:14px; cursor:pointer; position:relative; color:#222; }
+  .cs-opt:hover, .cs-opt.hl { background:#eef5f0; }
+  .cs-opt.sel { font-weight:700; color:#1f6b3a; }
+  .cs-opt.sel::before { content:'✓'; position:absolute; left:12px; color:#1f6b3a; }
 </style>
 </head>
 <body>
@@ -1818,6 +1832,94 @@ function goToShareUrl() {
 }
 
 window.addEventListener('DOMContentLoaded', init);
+// ============ 커스텀 드롭다운 (2026-10-01) ============
+// 일부 브라우저(Aside 등)에서 기본 <select> 목록창이 화면에 안 뜨는 문제 대응.
+// 원래 <select>는 숨겨서 그대로 두고(값·onchange 그대로 동작), 화면에는 직접 그린 목록을 보여준다.
+function enhanceSelect(sel) {
+  if (!sel || sel.dataset.csDone) return;
+  sel.dataset.csDone = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'cs-wrap';
+  wrap.style.cssText = sel.style.cssText;
+  wrap.style.marginBottom = getComputedStyle(sel).marginBottom;
+  sel.parentNode.insertBefore(wrap, sel);
+  wrap.appendChild(sel);
+  sel.classList.add('cs-native');
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = sel.className.replace('cs-native', '') + ' cs-btn';
+  btn.setAttribute('aria-haspopup', 'listbox');
+  btn.innerHTML = '<span class="cs-label"></span><span class="cs-arrow">▼</span>';
+  const list = document.createElement('div');
+  list.className = 'cs-list';
+  list.setAttribute('role', 'listbox');
+  wrap.appendChild(btn);
+  wrap.appendChild(list);
+
+  let hl = -1;
+  function opts() { return Array.from(sel.options); }
+  function refresh() {
+    const o = sel.options[sel.selectedIndex];
+    btn.querySelector('.cs-label').textContent = o ? o.textContent : '';
+  }
+  function build() {
+    list.innerHTML = '';
+    opts().forEach((o, i) => {
+      const d = document.createElement('div');
+      d.className = 'cs-opt' + (i === sel.selectedIndex ? ' sel' : '') + (i === hl ? ' hl' : '');
+      d.setAttribute('role', 'option');
+      d.textContent = o.textContent;
+      d.addEventListener('mousedown', e => e.preventDefault());
+      d.addEventListener('click', () => { choose(i); close(); btn.focus(); });
+      list.appendChild(d);
+    });
+  }
+  function choose(i) {
+    if (i < 0 || i >= sel.options.length) return;
+    if (sel.selectedIndex !== i) {
+      sel.selectedIndex = i;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    refresh();
+  }
+  function open() {
+    document.querySelectorAll('.cs-wrap.open').forEach(w => { if (w !== wrap) w.classList.remove('open'); });
+    hl = sel.selectedIndex; build();
+    wrap.classList.add('open');
+    const cur = list.querySelector('.cs-opt.sel');
+    if (cur && cur.offsetTop + cur.offsetHeight > list.clientHeight) list.scrollTop = cur.offsetTop - 6;
+  }
+  function close() { wrap.classList.remove('open'); }
+
+  btn.addEventListener('click', () => wrap.classList.contains('open') ? close() : open());
+  btn.addEventListener('keydown', e => {
+    const isOpen = wrap.classList.contains('open');
+    const n = sel.options.length;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      if (isOpen) { hl = Math.max(0, Math.min(n - 1, hl + step)); build(); }
+      else choose(Math.max(0, Math.min(n - 1, sel.selectedIndex + step)));
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (isOpen) { choose(hl); close(); } else open();
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      close();
+    }
+  });
+  document.addEventListener('click', e => { if (!wrap.contains(e.target)) close(); });
+  sel.addEventListener('change', refresh);
+  new MutationObserver(() => { refresh(); if (wrap.classList.contains('open')) build(); })
+    .observe(sel, { childList: true, subtree: true, attributes: true, characterData: true });
+  refresh();
+}
+function enhanceAdminSelects() {
+  document.querySelectorAll('select.training-select-admin, select.print-select').forEach(enhanceSelect);
+}
+window.addEventListener('DOMContentLoaded', enhanceAdminSelects);
+
+
 </script>
 </body>
 </html>
