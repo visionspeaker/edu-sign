@@ -318,6 +318,30 @@
   .cs-opt:hover, .cs-opt.hl { background:#eef5f0; }
   .cs-opt.sel { font-weight:700; color:#1f6b3a; }
   .cs-opt.sel::before { content:'✓'; position:absolute; left:12px; color:#1f6b3a; }
+  /* 조직도 기준 미서명자 (2026-10-01) */
+  .org-card { background:#fff; border:1.5px solid #e3e6ea; border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+  .org-card .oc-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .org-card .oc-title { font-size:14px; font-weight:800; color:#0a3a1e; }
+  .org-card .oc-sub { font-size:11.5px; color:#888; margin-top:3px; line-height:1.5; }
+  .org-card .oc-btn { padding:7px 10px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600; font-family:inherit; white-space:nowrap; }
+  .org-card .oc-btn:disabled { opacity:.5; cursor:default; }
+  .org-card .oc-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0; }
+  .org-card .oc-stat { background:#f7f8fa; border-radius:10px; padding:10px 6px; text-align:center; }
+  .org-card .oc-stat b { display:block; font-size:20px; color:#1f6b3a; }
+  .org-card .oc-stat.bad b { color:#c62828; }
+  .org-card .oc-stat span { font-size:11px; color:#888; }
+  .org-card .oc-actions { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  .org-card .dept-block { margin-bottom:8px; }
+  .org-card .emp-row { padding:8px 14px; font-size:13.5px; }
+  .org-card .team { font-size:11px; color:#888; margin-right:4px; }
+  .org-card .oc-x { padding:4px 8px; border:1px solid #e3e6ea; background:#fff; color:#666; border-radius:8px; cursor:pointer; font-size:11px; font-family:inherit; }
+  .org-card .oc-x:hover { border-color:#c62828; color:#c62828; }
+  .org-card .oc-x.inc:hover { border-color:#1f6b3a; color:#1f6b3a; }
+  .org-card .badge-no { background:#fdecea; color:#c62828; padding:3px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+  .org-card .oc-note { font-size:11px; color:#b26a00; margin-left:4px; }
+  .org-card details { margin-top:8px; font-size:13px; }
+  .org-card summary { cursor:pointer; color:#555; font-weight:600; padding:6px 0; }
+  .org-card .oc-empty { text-align:center; color:#1f6b3a; font-weight:700; padding:14px; font-size:13px; }
 </style>
 </head>
 <body>
@@ -506,9 +530,13 @@
         </div>
       </div>
 
-      <div style="display:flex; gap:8px; margin-bottom:14px;">
-        <select class="search-box training-select-admin" id="adminTrainingSelect" onchange="renderAdmin()" style="flex:2; margin-bottom:0;"></select>
-        <input type="date" class="search-box" id="adminDateSelect" onchange="renderAdmin()" style="flex:1; margin-bottom:0;">
+      <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
+        <select class="search-box training-select-admin" id="adminTrainingSelect" onchange="renderAdmin()" style="flex:2 1 220px; margin-bottom:0;"></select>
+        <div style="flex:1 1 300px; display:flex; gap:6px; align-items:center;">
+          <input type="date" class="search-box" id="adminDateSelect" onchange="onAdminDateChange('start')" title="시작일" style="flex:1; min-width:0; margin-bottom:0;">
+          <span style="color:#888;">~</span>
+          <input type="date" class="search-box" id="adminDateEnd" onchange="onAdminDateChange('end')" title="종료일" style="flex:1; min-width:0; margin-bottom:0;">
+        </div>
       </div>
 
       <div class="stat-grid" style="grid-template-columns: 1fr 1fr;">
@@ -534,6 +562,8 @@
         </div>
         <div id="consentPdfList" style="max-height:260px; overflow-y:auto; background:#fff; border:1px solid #e3e6ea; border-radius:8px;"></div>
       </div>
+
+      <div id="orgCard" class="org-card"></div>
 
       <div id="adminBody"></div>
     </div>
@@ -803,6 +833,7 @@ function init() {
   document.getElementById('adminTrainingSelect').innerHTML =
     TRAININGS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
   document.getElementById('adminDateSelect').value = todayKey();
+  document.getElementById('adminDateEnd').value = todayKey();
 
   document.getElementById('pwInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') verifyPw();
@@ -1342,6 +1373,7 @@ function updateConnUI(ok, msg) {
 async function reloadRemote() {
   try { await pullRemote(true); }
   catch(e) { alert('동기화 실패: ' + (e.message || e)); }
+  if (isAdmin) loadOrg(false);
 }
 
 // ============ 관리자 ============
@@ -1380,6 +1412,7 @@ function toggleAdmin(on) {
     renderAdmin();
     if (isGsConfigured() && Date.now() - lastSyncAt > 30000) pullRemote(true);
     if (isGsConfigured()) pullActiveStates();
+    if (isGsConfigured()) loadOrg(false);
   }
 }
 
@@ -1390,6 +1423,19 @@ function setFilter(f) {
 }
 function getCurrentTraining() { return document.getElementById('adminTrainingSelect').value; }
 function getCurrentDate() { return document.getElementById('adminDateSelect').value || todayKey(); }
+function getCurrentDateEnd() {
+  const s = getCurrentDate();
+  const e = document.getElementById('adminDateEnd').value || s;
+  return e < s ? s : e;
+}
+function inAdminRange(d) { return !!d && d >= getCurrentDate() && d <= getCurrentDateEnd(); }
+function adminRangeLabel() { const s = getCurrentDate(), e = getCurrentDateEnd(); return s === e ? s : (s + '~' + e); }
+function onAdminDateChange(which) {
+  const sEl = document.getElementById('adminDateSelect'), eEl = document.getElementById('adminDateEnd');
+  if (which === 'start' && (!eEl.value || eEl.value < sEl.value)) eEl.value = sEl.value;
+  if (which === 'end' && eEl.value && sEl.value && eEl.value < sEl.value) sEl.value = eEl.value;
+  renderAdmin();
+}
 
 function renderAdmin() {
   const tid = getCurrentTraining();
@@ -1399,7 +1445,7 @@ function renderAdmin() {
 
   // 해당 교육·날짜의 모든 서명 추출
   const allSigned = Object.values(sigs).filter(s =>
-    s.training === tid && s.atDate === dateKey
+    s.training === tid && inAdminRange(s.atDate)
   );
 
   // 검색 필터
@@ -1456,8 +1502,9 @@ function renderAdmin() {
       </div>
     </div>`;
   });
-  if (!html) html = '<div class="empty-state">해당 날짜에 서명한 사람이 없습니다.</div>';
+  if (!html) html = '<div class="empty-state">해당 기간에 서명한 사람이 없습니다.</div>';
   document.getElementById('adminBody').innerHTML = html;
+  renderOrgCard(allSigned, q);
   // 동의서형 교육이면 PDF 다운 카드 표시
   refreshConsentPdfCard(tid, dateKey, allSigned);
 }
@@ -1500,7 +1547,7 @@ function _getConsentSigs() {
   const tid = getCurrentTraining();
   const dateKey = getCurrentDate();
   const sigs = loadSigs();
-  return Object.values(sigs).filter(s => s.training === tid && s.atDate === dateKey);
+  return Object.values(sigs).filter(s => s.training === tid && inAdminRange(s.atDate));
 }
 
 function downloadConsentPdfAll() {
@@ -1589,15 +1636,15 @@ function exportCSV() {
   const sigs = loadSigs();
   let csv = '﻿교육명,날짜,일시,부서,직급,이름\n';
   const signed = Object.values(sigs).filter(s =>
-    s.training === tid && s.atDate === dateKey
+    s.training === tid && inAdminRange(s.atDate)
   ).sort((a, b) => (a.atStr || '').localeCompare(b.atStr || ''));
   signed.forEach(s => {
-    csv += `"${t.name}","${dateKey}","${s.atStr || ''}","${s.dept || ''}","${s.rank || ''}","${s.name || ''}"\n`;
+    csv += `"${t.name}","${s.atDate || dateKey}","${s.atStr || ''}","${s.dept || ''}","${s.rank || ''}","${s.name || ''}"\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `한양전공_${t.name}_서명목록_${dateKey}.csv`;
+  a.href = url; a.download = `한양전공_${t.name}_서명목록_${adminRangeLabel()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
@@ -1607,15 +1654,15 @@ function copySigned() {
   const dateKey = getCurrentDate();
   const sigs = loadSigs();
   const signed = Object.values(sigs).filter(s =>
-    s.training === tid && s.atDate === dateKey
+    s.training === tid && inAdminRange(s.atDate)
   ).sort((a, b) => {
     const d = (a.dept || '').localeCompare(b.dept || '');
     return d !== 0 ? d : (a.atStr || '').localeCompare(b.atStr || '');
   });
-  if (!signed.length) { alert(`${dateKey} 기준 서명자가 없습니다.`); return; }
+  if (!signed.length) { alert(`${adminRangeLabel()} 기준 서명자가 없습니다.`); return; }
   const lines = signed.map(s => `${s.dept} ${s.rank} ${s.name}`);
   const text = lines.join('\n');
-  navigator.clipboard.writeText(text).then(() => alert(`[${dateKey}] 서명자 ${lines.length}명 명단이 클립보드에 복사되었습니다.\n\n` + text.split('\n').slice(0,5).join('\n') + (lines.length > 5 ? '\n...' : '')));
+  navigator.clipboard.writeText(text).then(() => alert(`[${adminRangeLabel()}] 서명자 ${lines.length}명 명단이 클립보드에 복사되었습니다.\n\n` + text.split('\n').slice(0,5).join('\n') + (lines.length > 5 ? '\n...' : '')));
 }
 
 // ============ 서명결과 출력 ============
@@ -1628,7 +1675,7 @@ function openPrintSetup() {
   // 기간 기본값 = 현재 관리자 선택 날짜
   const currentDate = getCurrentDate();
   document.getElementById('printDateFrom').value = currentDate;
-  document.getElementById('printDateTo').value = currentDate;
+  document.getElementById('printDateTo').value = getCurrentDateEnd();
   document.getElementById('printSetupModal').classList.add('show');
 }
 
@@ -1832,6 +1879,148 @@ function goToShareUrl() {
 }
 
 window.addEventListener('DOMContentLoaded', init);
+// ============ 조직도 기준 미서명자 (2026-10-01) ============
+// 조직도 슬라이드 1페이지 → Apps Script가 '조직도' 시트로 자동 갱신(1시간마다) → 여기서 불러와 서명 기록과 이름으로 대조
+const ORG_CACHE_KEY = 'hy_org_v1';
+let orgData = (() => { try { return JSON.parse(localStorage.getItem(ORG_CACHE_KEY) || 'null'); } catch (e) { return null; } })();
+let orgLoading = false, orgError = '';
+function _nm(s) { return String(s || '').replace(/\s+/g, ''); }
+
+async function loadOrg(forceSync) {
+  if (!isGsConfigured() || orgLoading) return;
+  orgLoading = true; orgError = '';
+  renderOrgCardSafe();
+  try {
+    const res = forceSync
+      ? await fetch(GS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'syncorg' }) })
+      : await fetch(GS_URL + '?action=org', { method: 'GET' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.ok || !data.org) throw new Error(data.error || '조직도 응답 오류');
+    orgData = data.org;
+    localStorage.setItem(ORG_CACHE_KEY, JSON.stringify(orgData));
+  } catch (e) {
+    console.warn('org load failed', e);
+    orgError = String(e.message || e);
+    if (forceSync) alert('조직도 갱신 실패: ' + orgError);
+  } finally {
+    orgLoading = false;
+    renderOrgCardSafe();
+  }
+}
+
+async function setOrgTarget(name, target) {
+  if (!orgData) return;
+  const m = orgData.members.find(x => _nm(x.name) === _nm(name));
+  if (!m) return;
+  const prev = m.target;
+  m.target = target;
+  renderOrgCardSafe();
+  try {
+    const res = await fetch(GS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'setorgtarget', name: name, target: target }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '저장 실패');
+    if (data.org) orgData = data.org;
+    localStorage.setItem(ORG_CACHE_KEY, JSON.stringify(orgData));
+  } catch (e) {
+    m.target = prev;
+    alert('서명 대상 변경 실패: ' + (e.message || e));
+  }
+  renderOrgCardSafe();
+}
+
+function renderOrgCardSafe() {
+  if (!isAdmin) return;
+  const tid = getCurrentTraining();
+  const sigs = loadSigs();
+  const allSigned = Object.values(sigs).filter(s => s.training === tid && inAdminRange(s.atDate));
+  renderOrgCard(allSigned, (document.getElementById('searchInput').value || '').trim().toLowerCase());
+}
+
+function _orgUnsigned(allSigned) {
+  const signedNames = new Set(allSigned.map(s => _nm(s.name)));
+  const members = (orgData && orgData.members) || [];
+  const targets = members.filter(m => m.target);
+  const unsigned = targets.filter(m => !signedNames.has(_nm(m.name)));
+  const excluded = members.filter(m => !m.target);
+  const orgNames = new Set(members.map(m => _nm(m.name)));
+  const outside = allSigned.filter(s => !orgNames.has(_nm(s.name)));
+  return { members, targets, unsigned, excluded, outside, signedCount: targets.length - unsigned.length };
+}
+
+function renderOrgCard(allSigned, q) {
+  const el = document.getElementById('orgCard');
+  if (!el) return;
+  const t = getTraining(getCurrentTraining());
+  const head = (sub) => `<div class="oc-head">
+      <div><div class="oc-title">👥 미서명자 (조직도 기준)</div><div class="oc-sub">${sub}</div></div>
+      <button class="oc-btn" onclick="loadOrg(true)" ${orgLoading ? 'disabled' : ''}>${orgLoading ? '불러오는 중…' : '↻ 조직도 갱신'}</button>
+    </div>`;
+  if (!orgData) {
+    el.innerHTML = head(orgError ? '조직도를 불러오지 못했습니다: ' + escapeHtml(orgError) : '조직도를 불러오는 중입니다…');
+    return;
+  }
+  const r = _orgUnsigned(allSigned);
+  const rate = r.targets.length ? Math.round(r.signedCount / r.targets.length * 100) : 0;
+  const match = (m) => !q || [m.name, m.dept, m.rank, m.team].some(v => String(v || '').toLowerCase().includes(q));
+  const sub = `${escapeHtml(t ? t.name : '')} · ${escapeHtml(adminRangeLabel())}<br>조직도 ${escapeHtml(orgData.slideDate || '')} (슬라이드 1페이지) · 등록 ${r.members.length}명 중 서명 대상 ${r.targets.length}명 · 갱신 ${escapeHtml(orgData.syncedAt || '')}${orgError ? ' · ⚠ 최신 갱신 실패' : ''}`;
+
+  const deptOrder = [];
+  r.members.forEach(m => { if (!deptOrder.includes(m.dept)) deptOrder.push(m.dept); });
+  let list = '';
+  deptOrder.forEach(dept => {
+    const deptTargets = r.targets.filter(m => m.dept === dept);
+    const rows = r.unsigned.filter(m => m.dept === dept && match(m));
+    if (!rows.length) return;
+    list += `<div class="dept-block open">
+      <div class="dept-head" onclick="this.parentElement.classList.toggle('open')">
+        <span>${escapeHtml(dept)}</span><span class="ratio">미서명 ${r.unsigned.filter(m => m.dept === dept).length} / ${deptTargets.length}명</span>
+      </div>
+      <div class="dept-body">${rows.map(m => `
+        <div class="emp-row">
+          <div>${m.team ? `<span class="team">${escapeHtml(m.team)}</span>` : ''}${escapeHtml(m.rank)} ${escapeHtml(m.name)}${m.note ? `<span class="oc-note">${escapeHtml(m.note)}</span>` : ''}</div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="badge-no">미서명</span>
+            <button class="oc-x" title="서명 대상에서 제외 (조직도 시트 '서명대상' = N)" onclick="setOrgTarget('${escapeHtml(m.name)}', false)">대상 제외</button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  if (!list) list = r.unsigned.length ? '<div class="oc-empty">검색 조건에 맞는 미서명자가 없습니다.</div>' : '<div class="oc-empty">✓ 서명 대상자 전원 서명 완료</div>';
+
+  const excludedHtml = r.excluded.length ? `<details><summary>서명 대상 제외 ${r.excluded.length}명 (검토)</summary>${r.excluded.map(m => `
+      <div class="emp-row"><div><span class="team">${escapeHtml(m.dept)}</span>${escapeHtml(m.rank)} ${escapeHtml(m.name)}</div>
+      <button class="oc-x inc" onclick="setOrgTarget('${escapeHtml(m.name)}', true)">대상 포함</button></div>`).join('')}</details>` : '';
+  const outsideHtml = r.outside.length ? `<details><summary>조직도에 없는 이름으로 서명 ${r.outside.length}건 (이름 오타·신규 입사자 확인)</summary>${r.outside.map(s => `
+      <div class="emp-row"><div>${escapeHtml(s.dept || '')} · ${escapeHtml(s.rank || '')} ${escapeHtml(s.name || '')}</div><div class="meta">${escapeHtml(s.atStr || '')}</div></div>`).join('')}</details>` : '';
+  const removedHtml = (orgData.removed && orgData.removed.length) ? `<div class="oc-sub">최근 갱신에서 조직도에서 빠진 인원: ${orgData.removed.map(escapeHtml).join(', ')}</div>` : '';
+
+  el.innerHTML = head(sub) + `
+    <div class="oc-stats">
+      <div class="oc-stat"><b>${r.signedCount}</b><span>서명 완료</span></div>
+      <div class="oc-stat bad"><b>${r.unsigned.length}</b><span>미서명</span></div>
+      <div class="oc-stat"><b>${rate}%</b><span>서명률</span></div>
+    </div>
+    <div class="oc-actions">
+      <button class="oc-btn" onclick="copyUnsigned()" ${r.unsigned.length ? '' : 'disabled'}>📋 미서명자 명단 복사</button>
+    </div>
+    ${list}${excludedHtml}${outsideHtml}${removedHtml}`;
+}
+
+function copyUnsigned() {
+  const tid = getCurrentTraining();
+  const t = getTraining(tid);
+  const allSigned = Object.values(loadSigs()).filter(s => s.training === tid && inAdminRange(s.atDate));
+  const r = _orgUnsigned(allSigned);
+  if (!r.unsigned.length) { alert('미서명자가 없습니다.'); return; }
+  const byDept = {};
+  r.unsigned.forEach(m => { (byDept[m.dept] = byDept[m.dept] || []).push(`${m.rank} ${m.name}`); });
+  const text = `[${t ? t.name : ''} 미서명자 · ${adminRangeLabel()}] ${r.unsigned.length}명\n` +
+    Object.entries(byDept).map(([d, arr]) => `- ${d} (${arr.length}): ${arr.join(', ')}`).join('\n');
+  navigator.clipboard.writeText(text).then(() => alert('미서명자 명단이 클립보드에 복사되었습니다.\n\n' + text));
+}
+
 // ============ 커스텀 드롭다운 (2026-10-01) ============
 // 일부 브라우저(Aside 등)에서 기본 <select> 목록창이 화면에 안 뜨는 문제 대응.
 // 원래 <select>는 숨겨서 그대로 두고(값·onchange 그대로 동작), 화면에는 직접 그린 목록을 보여준다.
