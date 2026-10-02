@@ -235,15 +235,15 @@
   .pp-header { position:sticky; top:0; background:#fff; border-bottom:1px solid #e3e6ea; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; z-index:1; }
   .pp-btn-secondary { padding:8px 16px; background:#fff; border:1px solid #ddd; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:600; font-size:13px; }
   .pp-btn-primary { padding:8px 16px; background:#1f6b3a; color:#fff; border:none; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:700; font-size:13px; }
-  .print-content { max-width: 210mm; margin: 20px auto; padding: 5mm 3mm 8mm 3mm; background:#fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-  .print-content .p-meta { display:flex; justify-content:space-between; padding-bottom:10px; border-bottom:2px solid #1f6b3a; font-size:13px; font-weight:700; color:#0a3a1e; margin-bottom:24px; }
-  .print-content h1 { text-align:center; font-size:24px; font-weight:800; margin:14px 0 6px; }
-  .print-content .p-sub { text-align:center; font-size:12px; color:#777; margin-bottom:18px; font-weight:400; }
-  .print-content .p-stats { text-align:center; font-size:12px; color:#555; margin-bottom:16px; }
-  .print-content .p-stats b { color:#1f6b3a; font-size:14px; }
+  .print-content { max-width: 210mm; margin: 20px auto; padding: 5mm 3mm 5mm 3mm; background:#fff; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+  .print-content .p-meta { display:flex; justify-content:space-between; padding-bottom:6px; border-bottom:2px solid #1f6b3a; font-size:12px; font-weight:700; color:#0a3a1e; margin-bottom:8px; }
+  .print-content h1 { text-align:center; font-size:18px; font-weight:800; margin:4px 0 2px; }
+  .print-content .p-sub { text-align:center; font-size:11px; color:#777; margin-bottom:6px; font-weight:400; }
+  .print-content .p-stats { text-align:center; font-size:11px; color:#555; margin-bottom:8px; }
+  .print-content .p-stats b { color:#1f6b3a; font-size:12px; }
   .print-tables { display:grid; grid-template-columns:1fr 1fr; gap:3mm; align-items:start; margin-bottom:4px; width:100%; }
-  .print-table { width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; }
-  .print-table th, .print-table td { border:1px solid #333; padding:4px 3px; text-align:center; vertical-align:middle; word-break:break-all; }
+  .print-table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; }
+  .print-table th, .print-table td { border:1px solid #333; padding:2px 3px; text-align:center; vertical-align:middle; word-break:break-all; }
   .print-agreement td:nth-child(2) { font-size:11px; white-space:nowrap; }
   .print-agreement td:nth-child(3) { font-size:11px; white-space:nowrap; overflow:hidden; }
   .print-table:not(.print-agreement) td:nth-child(2) { font-size:10.5px; }
@@ -251,7 +251,7 @@
   .print-table th { background:#e6f4ec; font-weight:700; }
   .print-table td.dept { background:#f5faf7; font-weight:600; writing-mode:vertical-rl; letter-spacing:2px; }
   .print-table td.sig { min-width:60px; }
-  .print-table td.sig img { max-width:110px; max-height:36px; display:block; margin:0 auto; }
+  .print-table td.sig img { max-width:100px; max-height:24px; display:block; margin:0 auto; }
   .print-table td.sig .unsigned { color:#c62828; font-weight:700; font-size:11px; }
   /* Flow-based print layout (columns continue across pages) */
   .print-hrow { display:grid; border:1px solid #333; background:#e6f4ec; font-weight:700; font-size:12px; margin-bottom:-1px; }
@@ -276,11 +276,13 @@
     #printPreview, #printPreview *, #consentPdfPreview, #consentPdfPreview * { visibility:visible !important; }
     #printPreview, #consentPdfPreview { display:block !important; position:absolute !important; top:0 !important; left:0 !important; right:0 !important; width:100% !important; background:#fff !important; overflow:visible !important; }
     .pp-header { display:none !important; }
-    .print-content { box-shadow:none !important; margin:0 !important; padding:6mm 5mm !important; max-width:none !important; width:100% !important; box-sizing:border-box !important; }
+    .print-content { box-shadow:none !important; margin:0 !important; padding:5mm 4mm !important; max-width:none !important; width:100% !important; box-sizing:border-box !important; }
     .print-tables { display:grid !important; grid-template-columns:1fr 1fr !important; gap:3mm !important; width:100% !important; margin:0 !important; }
-    .print-table { width:100% !important; min-width:0 !important; max-width:none !important; table-layout:fixed !important; border-collapse:collapse !important; }
+    .print-table { width:100% !important; min-width:0 !important; max-width:none !important; table-layout:fixed !important; border-collapse:collapse !important; font-size:10.5px !important; }
+    .print-table th, .print-table td { padding:1.5px 3px !important; }
+    .print-table td.sig img { max-height:22px !important; }
     .print-item { break-inside:avoid !important; page-break-inside:avoid !important; }
-    .print-item .sig img { max-width:90px !important; max-height:28px !important; }
+    .print-item .sig img { max-width:90px !important; max-height:22px !important; }
     @page { size: A4; margin: 0; }
   }
   /* Setup wizard */
@@ -1743,8 +1745,8 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
   const dateLabel = (df && dt && df !== dt) ? `${df} ~ ${dt}` : (df || '전체 기간');
   const titleLabel = isAll ? '전체' : t.name;
 
-  // 페이지 단위로 chunk. 컬럼당 25행 기준 (A4 여백 8mm)
-  const ROWS_PER_COL = 26;
+  // 페이지 단위로 chunk. A4 한 페이지에 들어갈 수 있는 컬럼당 행 수
+  const ROWS_PER_COL = 24;
   const rowsPerPage = ROWS_PER_COL * cols;
   const pages = [];
   for (let p = 0; p < signed.length; p += rowsPerPage) pages.push(signed.slice(p, p + rowsPerPage));
