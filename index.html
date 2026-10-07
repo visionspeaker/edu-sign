@@ -58,7 +58,7 @@
   .section-heading-active { color:#0a3a1e; }
   .section-heading-inactive { color:#999; border-top:1px solid #e3e6ea; margin-top:6px; padding-top:16px; }
   .section-heading:first-child { padding-top:4px; }
-  /* 교육 메뉴 관리 (관리자) */
+  /* 메뉴 관리 (관리자) */
   .active-card { background:#f8faf9; border:1px solid #d5e3d9; border-radius:14px; padding:14px 16px; margin-bottom:14px; }
   .active-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
   .active-title { font-size:14px; font-weight:800; color:#0a3a1e; }
@@ -174,6 +174,12 @@
   .consent-doc .consent-val { font-size:12px; color:#333; line-height:1.6; }
   .consent-doc .consent-val b { color:#0a3a1e; font-weight:700; }
   .consent-doc .consent-sub { color:#888; font-size:10.5px; }
+  .gear-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .gear-btn { display:flex; align-items:center; gap:8px; padding:14px 10px; border:2px solid #eef0f3; border-radius:12px; background:#fff; cursor:pointer; font-family:inherit; font-size:15px; font-weight:700; color:#333; text-align:left; }
+  .gear-btn .ck { width:20px; height:20px; border-radius:6px; border:2px solid #ccc; display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff; flex-shrink:0; }
+  .gear-btn.selected { border-color:#1f6b3a; background:#e6f4ec; color:#0a3a1e; }
+  .gear-btn.selected .ck { background:#1f6b3a; border-color:#1f6b3a; }
+  #sigGearInfo { display:none; background:#f3f9f5; border-left:2px solid #eef0f3; border-right:2px solid #eef0f3; padding:8px 16px; font-size:12.5px; color:#0a3a1e; font-weight:700; }
   .agreement-btn { flex:1; padding:16px 12px; border:2px solid #eef0f3; border-radius:12px; background:#fff; cursor:pointer; font-family:inherit; font-size:15px; font-weight:700; color:#333; transition:all .15s; }
   .agreement-btn:active { transform:scale(.98); }
   .agreement-btn.selected { background:#1f6b3a; color:#fff; border-color:#1f6b3a; }
@@ -247,6 +253,8 @@
   .print-agreement td:nth-child(2) { font-size:11px; white-space:nowrap; }
   .print-agreement td:nth-child(3) { font-size:11px; white-space:nowrap; overflow:hidden; }
   .print-table:not(.print-agreement) td:nth-child(2) { font-size:10.5px; }
+  .print-table.print-gear td:nth-child(2) { white-space:nowrap; overflow:hidden; font-size:10px; letter-spacing:-0.3px; }
+  .print-table td.gear-items { font-size:9.5px; font-weight:700; color:#0a3a1e; word-break:keep-all; line-height:1.25; }
   .print-table:not(.print-agreement) td:nth-child(3) { white-space:nowrap; overflow:hidden; }
   .print-table th { background:#e6f4ec; font-weight:700; }
   .print-table td.dept { background:#f5faf7; font-weight:600; writing-mode:vertical-rl; letter-spacing:2px; }
@@ -419,7 +427,7 @@
           <option value="">— 부서를 선택해 주세요 —</option>
         </select>
       </div>
-      <div style="padding: 12px 16px 0;">
+      <div style="padding: 12px 16px 0;" id="rankWrap">
         <select id="rankSelect" onchange="onInputChange()">
           <option value="">— 직급을 선택해 주세요 —</option>
           <option value="사원">사원</option>
@@ -436,6 +444,11 @@
       </div>
       <div style="padding: 12px 16px 0;">
         <input type="text" id="nameInput" placeholder="이름을 입력해 주세요" oninput="onInputChange()" autocomplete="off">
+      </div>
+      <div id="gearBlock" style="display:none; padding: 20px 16px 0;">
+        <div style="font-size:14px; font-weight:700; margin-bottom:10px; color:#0a3a1e;">👷 수령한 안전용품 <span style="font-weight:500; color:#888; font-size:12px;">여러 개 선택 가능</span></div>
+        <div class="gear-grid" id="gearGrid"></div>
+        <input type="text" id="gearEtcInput" placeholder="기타 품목을 입력해 주세요" oninput="onInputChange()" autocomplete="off" style="display:none; margin-top:8px;">
       </div>
       <div id="agreementBlock" style="display:none; padding: 20px 16px 0;">
         <div id="consentContentBox" style="display:none;"></div>
@@ -454,6 +467,7 @@
           <span id="sigInfo">부서 · 이름</span>
           <span class="reset" onclick="clearSig()">↻ 다시</span>
         </div>
+        <div id="sigGearInfo"></div>
         <div class="signature-canvas-wrap">
           <canvas id="sig" width="800" height="480"></canvas>
           <div class="sig-label">S I G N A T U R E</div>
@@ -483,8 +497,8 @@
       <div class="active-card">
         <div class="active-head">
           <div>
-            <div class="active-title">📋 교육 메뉴 관리</div>
-            <div class="active-sub">각 교육의 서명 활성화 여부를 관리합니다. 저장 시 모든 폰에 반영됩니다.</div>
+            <div class="active-title">📋 메뉴 관리</div>
+            <div class="active-sub">각 메뉴의 서명 활성화 여부를 관리합니다. 저장 시 모든 폰에 반영됩니다.</div>
           </div>
           <button class="active-more" onclick="toggleActiveCard()" id="activeMoreBtn">펼치기 ▾</button>
         </div>
@@ -645,6 +659,7 @@ const TRAININGS = [
   { id:'special',       icon:'⚠️', name:'특별교육',                  desc:'유해·위험작업 종사자 별도 안전교육' },
   { id:'risk_assess',   icon:'🛡️', name:'위험성평가',                desc:'작업장 유해·위험요인 파악 및 평가 (산업안전보건법 제36조)' },
   { id:'emergency',     icon:'🚨', name:'비상대응훈련',              desc:'화재·재난 등 비상 상황 대응 훈련' },
+  { id:'safety_gear',   icon:'👷', name:'안전용품 수령',             desc:'안전화·안전모·안전대 등 지급 확인', type:'gear' },
   { id:'adhoc',         icon:'💡', name:'수시교육',                  desc:'변경사항·신규 업무·이슈 발생 시 수시 교육' },
   { id:'health_privacy', icon:'🏥', name:'임직원 건강·보건관리 개인정보 처리 동의', desc:'',
     type:'consent',
@@ -660,9 +675,14 @@ const TRAININGS = [
 ];
 function getTraining(id) { return TRAININGS.find(x => x.id === id); }
 function isConsentTraining(id) { const t = getTraining(id); return !!(t && t.type === 'consent'); }
+function isGearTraining(id) { const t = getTraining(id); return !!(t && t.type === 'gear'); }
+const GEAR_ITEMS = [
+  { key:'안전화', icon:'🥾' }, { key:'안전모', icon:'⛑️' },
+  { key:'안전대', icon:'🦺' }, { key:'기타',   icon:'✏️' }
+];
 // ============ 교육 활성화 상태 (관리자가 시트에서 토글) ============
 // 기본값: 각 교육 활성화 여부. 서버(구글시트)에서 로드되면 덮어씀.
-const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, risk_assess:false, emergency:false, adhoc:true, health_privacy:false, agreement_v9:false };
+const DEFAULT_ACTIVE = { safety:true, mandatory:true, special:true, risk_assess:false, emergency:false, adhoc:true, safety_gear:false, health_privacy:false, agreement_v9:false };
 let activeStates = Object.assign({}, DEFAULT_ACTIVE);
 let activeDirty = false;  // 관리자가 토글을 변경했으나 아직 서버 저장 전인지 여부. 폴링이 로컬 변경을 덮어쓰지 않도록 함.
 const DISABLED_DESC = '서명 기간이 아닙니다';
@@ -761,6 +781,7 @@ let step = 1, selectedTraining = null, selectedDept = null, selectedEmp = null;
 // 딥링크 진입 여부(교육이 URL로 고정됨). 뒤로가기로 교육 선택 화면으로 못 나감.
 const isDeepLink = !!(_paramT && TRAININGS.find(x => x.id === _paramT));
 let selectedAgreement = null;
+let selectedGear = [];  // 안전용품 수령: 선택한 품목 key 목록
 let isAdmin = false, adminFilter = 'all';
 let lastSyncAt = 0, syncOk = false;
 
@@ -875,13 +896,53 @@ function onInputChange() {
   selectedDept = dept || null;
   const needsAgreement = isConsentTraining(selectedTraining);
   const agreementOk = !needsAgreement || !!selectedAgreement;
-  if (dept && rank && name && agreementOk) {
-    selectedEmp = { dept, rank, name };
+  const isGear = isGearTraining(selectedTraining);
+  const gearOk = !isGear || isGearSelectionValid();
+  if (dept && (rank || isGear) && name && agreementOk && gearOk) {
+    selectedEmp = { dept, rank: isGear ? '' : rank, name };
     document.getElementById('nextBtn').disabled = false;
   } else {
     selectedEmp = null;
     document.getElementById('nextBtn').disabled = true;
   }
+}
+
+function renderGearGrid() {
+  document.getElementById('gearGrid').innerHTML = GEAR_ITEMS.map(g => `
+    <button type="button" class="gear-btn${selectedGear.includes(g.key) ? ' selected' : ''}" onclick="toggleGear('${g.key}')">
+      <span class="ck">${selectedGear.includes(g.key) ? '✓' : ''}</span>${g.icon} ${g.key}
+    </button>`).join('');
+  document.getElementById('gearEtcInput').style.display = selectedGear.includes('기타') ? '' : 'none';
+}
+function toggleGear(key) {
+  const i = selectedGear.indexOf(key);
+  if (i >= 0) selectedGear.splice(i, 1); else selectedGear.push(key);
+  // 표시 순서는 GEAR_ITEMS 순서로 고정
+  selectedGear.sort((a, b) => GEAR_ITEMS.findIndex(g => g.key === a) - GEAR_ITEMS.findIndex(g => g.key === b));
+  renderGearGrid();
+  onInputChange();
+  if (key === '기타' && selectedGear.includes('기타')) document.getElementById('gearEtcInput').focus();
+}
+function gearEtcText() {
+  // 괄호는 시트 저장 형식 "(…)"과 충돌하므로 제거
+  return document.getElementById('gearEtcInput').value.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function isGearSelectionValid() {
+  if (selectedGear.length === 0) return false;
+  if (selectedGear.includes('기타') && !gearEtcText()) return false;
+  return true;
+}
+// 시트 저장용: "안전화, 안전모, 기타:방진마스크 2개"
+function gearSummary() {
+  return selectedGear.map(k => k === '기타' ? `기타:${gearEtcText()}` : k).join(', ');
+}
+// 화면/출력 표시용: "기타:xx" → "기타(xx)"
+function gearDisplay(raw) {
+  return (raw || '').replace(/기타:([^,]+)/, (_m, v) => `기타(${v.trim()})`);
+}
+function gearFromTrainingName(trainingName) {
+  const m = (trainingName || '').match(/\(([^)]+)\)\s*$/);
+  return m ? m[1] : '';
 }
 
 function selectAgreement(v) {
@@ -951,8 +1012,12 @@ function updateUI() {
       const t = TRAININGS.find(x => x.id === selectedTraining);
       document.getElementById('selectedTrainingDisplay').textContent = t.name;
       const isConsent = isConsentTraining(selectedTraining);
-      document.getElementById('selectedTrainingCard').style.display = isConsent ? 'none' : '';
+      const isGear = isGearTraining(selectedTraining);
+      document.getElementById('selectedTrainingCard').style.display = (isConsent || isGear) ? 'none' : '';
       document.getElementById('agreementBlock').style.display = isConsent ? '' : 'none';
+      document.getElementById('rankWrap').style.display = isGear ? 'none' : '';
+      document.getElementById('gearBlock').style.display = isGear ? '' : 'none';
+      if (isGear) renderGearGrid();
       // 동의서 본문 표시 (consentHtml 필드가 있는 경우)
       const consentBox = document.getElementById('consentContentBox');
       if (isConsent && t.consentHtml) {
@@ -968,7 +1033,10 @@ function updateUI() {
     nextBtn.textContent = '제출하기';
     nextBtn.disabled = !hasDrawn;
     if (selectedEmp) {
-      document.getElementById('sigInfo').textContent = `${selectedEmp.dept} · ${selectedEmp.rank} ${selectedEmp.name}`;
+      document.getElementById('sigInfo').textContent = `${selectedEmp.dept} · ${selectedEmp.rank ? selectedEmp.rank + ' ' : ''}${selectedEmp.name}`;
+      const gi = document.getElementById('sigGearInfo');
+      if (isGearTraining(selectedTraining)) { gi.textContent = '수령: ' + gearDisplay(gearSummary()); gi.style.display = 'block'; }
+      else { gi.textContent = ''; gi.style.display = 'none'; }
     }
   }
 }
@@ -1047,6 +1115,9 @@ async function submitSig() {
   if (isConsentTraining(selectedTraining) && selectedAgreement) {
     trainingName = `${t.name} (${selectedAgreement === 'agree' ? '동의함' : '동의하지 않음'})`;
   }
+  if (isGearTraining(selectedTraining)) {
+    trainingName = `${t.name} (${gearSummary()})`;
+  }
   const record = {
     training: selectedTraining, trainingName,
     dept: selectedEmp.dept, rank: selectedEmp.rank, name: selectedEmp.name,
@@ -1108,6 +1179,7 @@ function resetFlow() {
     document.getElementById('deptSelect').value = '';
     document.getElementById('rankSelect').value = '';
     document.getElementById('nameInput').value = '';
+    resetGear();
     clearSig(); updateUI();
     return;
   }
@@ -1118,7 +1190,13 @@ function resetFlow() {
   document.getElementById('deptSelect').value = '';
   document.getElementById('rankSelect').value = '';
   document.getElementById('nameInput').value = '';
+  resetGear();
   clearSig(); updateUI();
+}
+function resetGear() {
+  selectedGear = [];
+  document.getElementById('gearEtcInput').value = '';
+  renderGearGrid();
 }
 
 // ============ 교육 카드 렌더링 (활성 항목 자동 상단 노출) ============
@@ -1493,6 +1571,7 @@ function renderAdmin() {
           <div class="emp-row">
             <div>
               <div>${r.rank || ''} ${r.name || ''}</div>
+              ${isGearTraining(r.training) ? `<div class="meta" style="color:#0a3a1e; font-weight:700;">${escapeHtml(gearDisplay(gearFromTrainingName(r.trainingName)))}</div>` : ''}
               <div class="meta">${r.atStr || ''}</div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
@@ -1640,7 +1719,7 @@ function exportCSV() {
     s.training === tid && s.atDate === dateKey
   ).sort((a, b) => (a.atStr || '').localeCompare(b.atStr || ''));
   signed.forEach(s => {
-    csv += `"${t.name}","${dateKey}","${s.atStr || ''}","${s.dept || ''}","${s.rank || ''}","${s.name || ''}"\n`;
+    csv += `"${(s.trainingName || t.name).replace(/"/g, '""')}","${dateKey}","${s.atStr || ''}","${s.dept || ''}","${s.rank || ''}","${s.name || ''}"\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -1712,6 +1791,7 @@ async function doPrint() {
 function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) {
   const isAll = !trainingId || trainingId === '__all__';
   const isAgreement = !isAll && isConsentTraining(trainingId);  // consent 타입(취업규칙·건강정보처리) → 동의 여부 컬럼 포함
+  const isGear = !isAll && isGearTraining(trainingId);  // 안전용품 수령 → 수령 품목 컬럼 포함
   const t = isAll ? null : TRAININGS.find(x => x.id === trainingId);
   const df = dateFrom || '';
   const dt = dateTo || df;
@@ -1779,8 +1859,13 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
 
     html += '<div class="print-tables">';
     columns.forEach(colData => {
-      html += `<table class="print-table${isAgreement ? ' print-agreement' : ''}"><thead><tr>`;
-      if (isAgreement) {
+      html += `<table class="print-table${isAgreement ? ' print-agreement' : ''}${isGear ? ' print-gear' : ''}"><thead><tr>`;
+      if (isGear) {
+        html += '<th style="width:7%;">번호</th>';
+        html += '<th style="width:25%;">부서</th><th style="width:13%;">성명</th>';
+        html += '<th style="width:31%;">수령 품목</th>';
+        html += '<th style="width:24%;">서명</th>';
+      } else if (isAgreement) {
         html += '<th style="width:8%;">번호</th>';
         html += '<th style="width:22%;">부서</th><th style="width:24%;">성명</th>';
         html += '<th style="width:17%;">동의 여부</th>';
@@ -1809,13 +1894,16 @@ function buildPrintHTML(trainingId, dateFrom, dateTo, cols, sortMode, showRate) 
           const color = val === '동의함' ? '#1f6b3a' : (val === '동의하지 않음' ? '#c62828' : '#999');
           html += `<td style="color:${color}; font-weight:800;">${escapeHtml(val || '-')}</td>`;
         }
+        if (isGear) {
+          html += `<td class="gear-items">${escapeHtml(gearDisplay(gearFromTrainingName(r.trainingName)) || '-')}</td>`;
+        }
         html += `<td class="sig">${r.img ? `<img src="${r.img}" alt="서명">` : '<span class="unsigned">-</span>'}</td>`;
         html += '</tr>';
       });
 
       // Empty rows to balance columns
       const emptyRows = perCol - colData.length;
-      const totalCols = 4 + (isAll ? 1 : 0) + (isAgreement ? 1 : 0);
+      const totalCols = 4 + (isAll ? 1 : 0) + (isAgreement || isGear ? 1 : 0);
       for (let er = 0; er < emptyRows; er++) {
         html += '<tr><td>&nbsp;</td>';
         for (let ec = 0; ec < totalCols - 1; ec++) html += '<td></td>';
