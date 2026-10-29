@@ -153,6 +153,8 @@
   .conn-card.bad { background:#fdecec; border:1px solid #f3a3a3; color:#7a0a0a; }
   .conn-card.warn { background:#fff8e0; border:1px solid #f3e2a3; color:#7a5a00; }
   .conn-card .right { display:flex; gap:6px; }
+  .conn-card .conn-link { flex:1; min-width:0; cursor:pointer; }
+  .conn-card.ok .conn-link:hover #connTitle { text-decoration:underline; }
   .conn-card button { padding:6px 10px; border:1px solid currentColor; background:transparent; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; color:inherit; font-family:inherit; }
   .sync-banner { position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#1a73e8; color:#fff; padding:8px 16px; font-size:12px; text-align:center; z-index:999; display:none; }
   /* 동의서 내용 박스 */
@@ -488,7 +490,7 @@
       <div class="admin-sub">한양전공(주) · 서명 기록</div>
 
       <div class="conn-card" id="connCard">
-        <div><b id="connTitle">📡 연동 확인 중...</b><div id="connSub" style="font-size:12px; margin-top:2px;"></div></div>
+        <div class="conn-link" onclick="openSheet()" title="구글 시트 열기"><b id="connTitle">📡 연동 확인 중...</b><div id="connSub" style="font-size:12px; margin-top:2px;"></div></div>
         <div class="right">
           <button onclick="reloadRemote()">↻ 새로고침</button>
         </div>
@@ -1456,7 +1458,7 @@ function updateConnUI(ok, msg) {
     document.getElementById('connSub').textContent = 'index.html의 GS_URL 값을 수정 후 GitHub에 재업로드 필요';
   } else if (ok) {
     card.classList.add('ok');
-    document.getElementById('connTitle').textContent = '📡 Google Sheets 연결됨';
+    document.getElementById('connTitle').textContent = '📡 Google Sheets 연결됨 ↗';
     document.getElementById('connSub').textContent = msg + (lastSyncAt ? ' · ' + new Date(lastSyncAt).toLocaleTimeString('ko-KR') : '');
   } else {
     card.classList.add('bad');
@@ -1464,6 +1466,10 @@ function updateConnUI(ok, msg) {
     document.getElementById('connSub').textContent = msg;
   }
 }
+
+// 서명 기록 시트 (공유: 제한됨 — 권한 있는 계정만 열림)
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1SRBXv26OpeT9SVxBDViQ0r25X_pZHqC0e9aTEMrQQic/edit';
+function openSheet() { window.open(SHEET_URL, '_blank', 'noopener'); }
 
 async function reloadRemote() {
   try { await pullRemote(true); }
